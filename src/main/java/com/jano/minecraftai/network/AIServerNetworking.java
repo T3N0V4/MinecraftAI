@@ -1,5 +1,11 @@
 package com.jano.minecraftai.network;
 
+import com.jano.minecraftai.ai.AIModelRouter;
+import com.jano.minecraftai.ai.AIRequest;
+import com.jano.minecraftai.ai.AIResponse;
+import com.jano.minecraftai.ai.AIService;
+import com.jano.minecraftai.ai.providers.DebugProvider;
+
 import com.jano.minecraftai.context.PlayerContext;
 import com.jano.minecraftai.context.PlayerContextService;
 
@@ -11,6 +17,21 @@ public class AIServerNetworking {
 
     private static final int MAX_IMAGE_SIZE =
             1_000_000;
+
+    private static final AIService aiService;
+
+    static {
+
+        AIModelRouter router =
+                new AIModelRouter();
+
+        router.addProvider(
+                new DebugProvider()
+        );
+
+        aiService =
+                new AIService(router);
+    }
 
     public static void register() {
 
@@ -38,32 +59,29 @@ public class AIServerNetworking {
                                 PlayerContextService
                                         .getContext(player);
 
-                        int kb =
-                                imagen.length / 1024;
+                        AIRequest request =
+                                new AIRequest(
+                                        pregunta,
+                                        imagen,
+                                        context
+                                );
+
+                        AIResponse response =
+                                aiService.respond(request);
 
                         player.sendMessage(
                                 Text.literal(
-                                        "[AI SERVER]\n"
-                                                + "Pregunta recibida: "
-                                                + pregunta
-                                                + "\nImagen recibida: "
-                                                + kb
-                                                + " KB"
-                                                + "\nTarget: "
-                                                + context.target
+                                        "[AI]\n"
+                                                + response.content
+                                                + "\n\nModelo: "
+                                                + response.provider
+                                                + " / "
+                                                + response.model
+                                                + "\nTiempo: "
+                                                + response.durationMs
+                                                + " ms"
                                 ),
                                 false
-                        );
-
-                        System.out.println(
-                                "[MinecraftAI] Pregunta de "
-                                        + player.getName()
-                                                .getString()
-                                        + ": "
-                                        + pregunta
-                                        + " | imagen="
-                                        + imagen.length
-                                        + " bytes"
                         );
                     });
                 }

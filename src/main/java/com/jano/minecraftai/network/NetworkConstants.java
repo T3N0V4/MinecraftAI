@@ -1,6 +1,3 @@
-public class NetworkConstants {
-    
-}
 package com.jano.minecraftai.network;
 
 import net.minecraft.util.Identifier;
