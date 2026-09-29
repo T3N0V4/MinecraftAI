@@ -1,5 +1,5 @@
 package com.jano.minecraftai.ai.providers;
-import com.jano.minecraftai.ai.MinecraftAIPrompt;
+
 import com.jano.minecraftai.ai.AIProvider;
 import com.jano.minecraftai.ai.AIRequest;
 import com.jano.minecraftai.ai.AIResponse;
@@ -18,7 +18,8 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class GeminiProvider implements AIProvider {
+public class GeminiProvider
+        implements AIProvider {
 
     private static final String MODEL =
             "gemini-3.5-flash-lite";
@@ -33,7 +34,7 @@ public class GeminiProvider implements AIProvider {
         this.httpClient =
                 HttpClient.newBuilder()
                         .connectTimeout(
-                                Duration.ofSeconds(10)
+                                Duration.ofSeconds(8)
                         )
                         .build();
     }
@@ -52,7 +53,9 @@ public class GeminiProvider implements AIProvider {
     public boolean isAvailable() {
 
         String apiKey =
-                System.getenv(API_KEY_ENV);
+                System.getenv(
+                        API_KEY_ENV
+                );
 
         return apiKey != null
                 && !apiKey.isBlank();
@@ -67,7 +70,9 @@ public class GeminiProvider implements AIProvider {
                 System.currentTimeMillis();
 
         String apiKey =
-                System.getenv(API_KEY_ENV);
+                System.getenv(
+                        API_KEY_ENV
+                );
 
         if (
                 apiKey == null
@@ -84,19 +89,53 @@ public class GeminiProvider implements AIProvider {
 
         try {
 
-            String base64Image =
-                    Base64.getEncoder()
-                            .encodeToString(
-                                    request.image
-                            );
-
             String prompt =
-                    MinecraftAIPrompt.build(request);
-            String json =
-                    buildRequestJson(
-                            prompt,
-                            base64Image
+                    MinecraftAIPrompt.build(
+                            request
                     );
+
+            /*
+             * Solo enviamos imagen en la primera llamada.
+             *
+             * Una vez que una tool fue ejecutada,
+             * Gemini ya tiene el resultado real del server.
+             */
+            boolean includeImage =
+                    request.toolResults.isEmpty()
+                    && request.image != null
+                    && request.image.length > 0;
+
+            String json;
+
+            if (includeImage) {
+
+                String base64Image =
+                        Base64.getEncoder()
+                                .encodeToString(
+                                        request.image
+                                );
+
+                json =
+                        buildRequestJsonWithImage(
+                                prompt,
+                                base64Image
+                        );
+
+                System.out.println(
+                        "[MinecraftAI] Gemini: enviando imagen + texto."
+                );
+
+            } else {
+
+                json =
+                        buildRequestJsonTextOnly(
+                                prompt
+                        );
+
+                System.out.println(
+                        "[MinecraftAI] Gemini: enviando solo texto."
+                );
+            }
 
             String url =
                     "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -107,10 +146,12 @@ public class GeminiProvider implements AIProvider {
             HttpRequest httpRequest =
                     HttpRequest.newBuilder()
                             .uri(
-                                    URI.create(url)
+                                    URI.create(
+                                            url
+                                    )
                             )
                             .timeout(
-                                    Duration.ofSeconds(45)
+                                    Duration.ofSeconds(20)
                             )
                             .header(
                                     "Content-Type",
@@ -190,40 +231,7 @@ public class GeminiProvider implements AIProvider {
         }
     }
 
-    private String buildPrompt(
-            AIRequest request
-    ) {
-
-        return """
-                Sos MinecraftAI, un asistente dentro de Minecraft.
-
-                Respondé en español claro y breve.
-
-                Tenés dos fuentes de información:
-
-                1. Una captura de pantalla del jugador.
-                2. Contexto real obtenido directamente del servidor.
-
-                El contexto del servidor tiene prioridad para datos exactos.
-                La imagen sirve para interpretar qué está viendo o a qué se refiere el jugador.
-
-                No inventes datos que no aparecen en ninguna de las dos fuentes.
-                Si no podés identificar algo con seguridad, decilo.
-
-                Pregunta del jugador:
-                %s
-
-                Contexto del servidor:
-                %s
-                """
-                .formatted(
-                        request.question,
-                        request.playerContext
-                                .toString()
-                );
-    }
-
-    private String buildRequestJson(
+    private String buildRequestJsonWithImage(
             String prompt,
             String base64Image
     ) {
@@ -248,7 +256,7 @@ public class GeminiProvider implements AIProvider {
                   ],
                   "generationConfig": {
                     "temperature": 0.2,
-                    "maxOutputTokens": 500
+                    "maxOutputTokens": 300
                   }
                 }
                 """
@@ -258,17 +266,48 @@ public class GeminiProvider implements AIProvider {
                 );
     }
 
+    private String buildRequestJsonTextOnly(
+            String prompt
+    ) {
+
+        return """
+                {
+                  "contents": [
+                    {
+                      "role": "user",
+                      "parts": [
+                        {
+                          "text": "%s"
+                        }
+                      ]
+                    }
+                  ],
+                  "generationConfig": {
+                    "temperature": 0.2,
+                    "maxOutputTokens": 300
+                  }
+                }
+                """
+                .formatted(
+                        escapeJson(
+                                prompt
+                        )
+                );
+    }
+
     private String extractText(
             String json
     ) {
 
         Pattern pattern =
                 Pattern.compile(
-                        "\"text\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\""
+                        "\\\"text\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\"\\\\])*)\\\""
                 );
 
         Matcher matcher =
-                pattern.matcher(json);
+                pattern.matcher(
+                        json
+                );
 
         if (!matcher.find()) {
             return null;
@@ -284,11 +323,26 @@ public class GeminiProvider implements AIProvider {
     ) {
 
         return text
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n")
-                .replace("\t", "\\t");
+                .replace(
+                        "\\",
+                        "\\\\"
+                )
+                .replace(
+                        "\"",
+                        "\\\""
+                )
+                .replace(
+                        "\r",
+                        "\\r"
+                )
+                .replace(
+                        "\n",
+                        "\\n"
+                )
+                .replace(
+                        "\t",
+                        "\\t"
+                );
     }
 
     private String unescapeJson(
@@ -296,11 +350,26 @@ public class GeminiProvider implements AIProvider {
     ) {
 
         return text
-                .replace("\\n", "\n")
-                .replace("\\r", "\r")
-                .replace("\\t", "\t")
-                .replace("\\\"", "\"")
-                .replace("\\\\", "\\");
+                .replace(
+                        "\\n",
+                        "\n"
+                )
+                .replace(
+                        "\\r",
+                        "\r"
+                )
+                .replace(
+                        "\\t",
+                        "\t"
+                )
+                .replace(
+                        "\\\"",
+                        "\""
+                )
+                .replace(
+                        "\\\\",
+                        "\\"
+                );
     }
 
     private long elapsed(

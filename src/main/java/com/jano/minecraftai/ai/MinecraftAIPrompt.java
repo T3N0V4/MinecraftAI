@@ -73,6 +73,21 @@ public class MinecraftAIPrompt {
                 get_current_structure
                 Detecta la estructura generada en la que se encuentra el jugador.
 
+                get_item_info
+                Obtiene información real del objeto que el jugador sostiene.
+
+                get_block_info
+                Obtiene información real del bloque que está mirando.
+
+                get_mod_origin
+                Detecta de qué mod proviene el bloque, entidad u objeto actual.
+
+                get_recipe
+                Busca recetas reales cuyo resultado sea el objeto sostenido.
+
+                get_recipes_using
+                Busca recetas reales que usan el objeto sostenido como ingrediente.
+
                 =============================
                 CÓMO USAR TOOLS
                 =============================

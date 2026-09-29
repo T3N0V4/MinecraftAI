@@ -15,12 +15,52 @@ public class AIService {
 
     private final AIModelRouter router;
 
+    private final ToolExecutionGateway toolGateway;
+
     public AIService(
             AIModelRouter router
     ) {
 
+        this(
+                router,
+                new ToolExecutionGateway() {
+
+                    @Override
+                    public boolean exists(
+                            String name
+                    ) {
+
+                        return ToolManager
+                                .getRegistry()
+                                .get(name)
+                                != null;
+                    }
+
+                    @Override
+                    public ToolResult execute(
+                            String name,
+                            ServerPlayerEntity player
+                    ) {
+
+                        return ToolManager.execute(
+                                name,
+                                player
+                        );
+                    }
+                }
+        );
+    }
+
+    public AIService(
+            AIModelRouter router,
+            ToolExecutionGateway toolGateway
+    ) {
+
         this.router =
                 router;
+
+        this.toolGateway =
+                toolGateway;
     }
 
     public AIResponse respond(
@@ -49,6 +89,11 @@ public class AIService {
                 iteration++
         ) {
 
+            System.out.println(
+                    "[MinecraftAI] Llamada IA #"
+                            + (iteration + 1)
+            );
+
             AIResponse modelResponse =
                     router.respond(
                             request
@@ -68,8 +113,8 @@ public class AIService {
                     );
 
             /*
-             * No pidió tool:
-             * ya tenemos la respuesta final.
+             * Si no pidió tool,
+             * es la respuesta final.
              */
             if (toolName == null) {
 
@@ -84,7 +129,7 @@ public class AIService {
             }
 
             /*
-             * Evitamos loops del modelo.
+             * Evitar loops.
              */
             if (usedTools.contains(toolName)) {
 
@@ -99,14 +144,9 @@ public class AIService {
             }
 
             /*
-             * Verificamos que la tool exista.
+             * Comprobar existencia.
              */
-            if (
-                    ToolManager
-                            .getRegistry()
-                            .get(toolName)
-                    == null
-            ) {
+            if (!toolGateway.exists(toolName)) {
 
                 return AIResponse.failure(
                         modelResponse.provider,
@@ -127,11 +167,25 @@ public class AIService {
                             + toolName
             );
 
+            long toolStart =
+                    System.currentTimeMillis();
+
             ToolResult toolResult =
-                    ToolManager.execute(
+                    toolGateway.execute(
                             toolName,
                             player
                     );
+
+            System.out.println(
+                    "[MinecraftAI] Tool "
+                            + toolName
+                            + " terminada en "
+                            + (
+                                    System.currentTimeMillis()
+                                    - toolStart
+                            )
+                            + " ms"
+            );
 
             request.addToolResult(
                     toolName,

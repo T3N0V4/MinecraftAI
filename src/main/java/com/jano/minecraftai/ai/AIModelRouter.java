@@ -11,16 +11,28 @@ public class AIModelRouter {
     public void addProvider(
             AIProvider provider
     ) {
-        providers.add(provider);
+
+        providers.add(
+                provider
+        );
     }
 
     public AIResponse respond(
             AIRequest request
     ) {
 
-        for (AIProvider provider : providers) {
+        for (
+                AIProvider provider :
+                providers
+        ) {
 
             if (!provider.isAvailable()) {
+
+                System.out.println(
+                        "[MinecraftAI] Provider no disponible: "
+                                + provider.getProviderName()
+                );
+
                 continue;
             }
 
@@ -28,8 +40,25 @@ public class AIModelRouter {
 
             try {
 
+                long start =
+                        System.currentTimeMillis();
+
                 response =
-                        provider.respond(request);
+                        provider.respond(
+                                request
+                        );
+
+                long elapsed =
+                        System.currentTimeMillis()
+                                - start;
+
+                System.out.println(
+                        "[MinecraftAI] "
+                                + provider.getProviderName()
+                                + " respondió en "
+                                + elapsed
+                                + " ms"
+                );
 
             } catch (Exception e) {
 
@@ -47,7 +76,18 @@ public class AIModelRouter {
                     response != null
                     && response.success
             ) {
+
                 return response;
+            }
+
+            if (response != null) {
+
+                System.err.println(
+                        "[MinecraftAI] "
+                                + provider.getProviderName()
+                                + " falló: "
+                                + response.content
+                );
             }
         }
 
