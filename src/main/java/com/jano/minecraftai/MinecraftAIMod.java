@@ -9,5 +9,7 @@ public class MinecraftAIMod implements ModInitializer {
     @Override
     public void onInitialize() {
         System.out.println("[MinecraftAI] Mod iniciado correctamente.");
+
+        AICommand.register();
     }
 }
