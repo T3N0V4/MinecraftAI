@@ -12,6 +12,9 @@ import com.jano.minecraftai.context.PlayerContext;
 import com.jano.minecraftai.context.PlayerContextService;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+
+import net.minecraft.network.PacketByteBuf;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -250,12 +253,7 @@ public class AIServerNetworking {
                             context
                     );
 
-            player.sendMessage(
-                    Text.literal(
-                            "[AI] Pensando..."
-                    ),
-                    false
-            );
+            sendStatus(player, "Pensando...");
 
             new Thread(
                     () -> {
@@ -271,26 +269,7 @@ public class AIServerNetworking {
                                 return;
                             }
 
-                            player.sendMessage(
-                                    Text.literal(
-                                            "[AI] "
-                                                    + response.content
-                                    ),
-                                    false
-                            );
-
-                            player.sendMessage(
-                                    Text.literal(
-                                            "[AI DEBUG] "
-                                                    + response.provider
-                                                    + " / "
-                                                    + response.model
-                                                    + " - "
-                                                    + response.durationMs
-                                                    + " ms"
-                                    ),
-                                    false
-                            );
+                            sendResponse(player, response);
                         });
                     },
                     "MinecraftAI-Request"
@@ -298,6 +277,71 @@ public class AIServerNetworking {
         });
     }
 
+
+    private static void sendStatus(
+            ServerPlayerEntity player,
+            String status
+    ) {
+
+        PacketByteBuf buffer =
+                PacketByteBufs.create();
+
+        buffer.writeString(
+                status,
+                256
+        );
+
+        ServerPlayNetworking.send(
+                player,
+                NetworkConstants.AI_STATUS,
+                buffer
+        );
+    }
+
+    private static void sendResponse(
+            ServerPlayerEntity player,
+            AIResponse response
+    ) {
+
+        PacketByteBuf buffer =
+                PacketByteBufs.create();
+
+        buffer.writeString(
+                response.content == null
+                        ? ""
+                        : response.content,
+                32767
+        );
+
+        buffer.writeString(
+                response.provider == null
+                        ? ""
+                        : response.provider,
+                128
+        );
+
+        buffer.writeString(
+                response.model == null
+                        ? ""
+                        : response.model,
+                128
+        );
+
+        buffer.writeLong(
+                response.durationMs
+        );
+
+        ServerPlayNetworking.send(
+                player,
+                NetworkConstants.AI_RESPONSE,
+                buffer
+        );
+
+        sendStatus(
+                player,
+                "Listo"
+        );
+    }
     private static class PendingRequest {
 
         private final UUID playerId;

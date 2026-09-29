@@ -10,7 +10,6 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 
@@ -21,7 +20,6 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.ScreenshotRecorder;
 
 import net.minecraft.network.PacketByteBuf;
-import net.minecraft.text.Text;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -35,107 +33,489 @@ public class MinecraftAIClient
     private static final int MAX_WIDTH =
             640;
 
-    /*
-     * Minecraft 1.20.1 limita mucho el tamaño
-     * de cada custom payload.
-     *
-     * Dejamos margen usando chunks de 24 KB.
-     */
     private static final int CHUNK_SIZE =
             24_000;
 
     private static final int MAX_IMAGE_SIZE =
             1_000_000;
 
-    private static KeyBinding aiKey;
+    private static KeyBinding openAIKey;
+
+    private static boolean automaticKeyAssigned =
+            false;
+
+    private static final int[] KEY_CANDIDATES = {
+
+            GLFW.GLFW_KEY_J,
+            GLFW.GLFW_KEY_K,
+            GLFW.GLFW_KEY_U,
+            GLFW.GLFW_KEY_Y,
+            GLFW.GLFW_KEY_H,
+            GLFW.GLFW_KEY_B,
+            GLFW.GLFW_KEY_N,
+            GLFW.GLFW_KEY_M,
+            GLFW.GLFW_KEY_G,
+            GLFW.GLFW_KEY_R,
+            GLFW.GLFW_KEY_C,
+            GLFW.GLFW_KEY_Z,
+
+            GLFW.GLFW_KEY_F6,
+            GLFW.GLFW_KEY_F7,
+            GLFW.GLFW_KEY_F8,
+            GLFW.GLFW_KEY_F9
+    };
 
     @Override
     public void onInitializeClient() {
 
         registerAICommand();
-        registerDebugKey();
+
+        registerNetworking();
+
+        MinecraftAIHud.register();
+
+        /*
+         * IMPORTANTE:
+         *
+         * El keybind se REGISTRA ahora,
+         * antes de que GameOptions termine de inicializarse.
+         *
+         * Pero lo dejamos sin tecla.
+         */
+        registerUnboundKey();
+
+        /*
+         * Después, cuando GameOptions ya existe,
+         * buscamos una tecla libre y cambiamos el binding.
+         */
+        registerClientTick();
 
         System.out.println(
                 "[MinecraftAI] Cliente iniciado correctamente."
         );
     }
 
+
+    // ========================================================
+    // KEYBIND
+    // ========================================================
+
+    private static void registerUnboundKey() {
+
+        openAIKey =
+                KeyBindingHelper.registerKeyBinding(
+                        new KeyBinding(
+                                "key.minecraftai.open",
+                                InputUtil.Type.KEYSYM,
+                                GLFW.GLFW_KEY_UNKNOWN,
+                                "category.minecraftai"
+                        )
+                );
+
+        System.out.println(
+                "[MinecraftAI] Keybind registrado sin tecla inicial."
+        );
+    }
+
+    private static void registerClientTick() {
+
+        ClientTickEvents.END_CLIENT_TICK.register(
+                client -> {
+
+                    if (
+                            !automaticKeyAssigned
+                            && client.options != null
+                            && openAIKey != null
+                    ) {
+
+                        assignAutomaticKey(
+                                client
+                        );
+                    }
+
+                    if (
+                            openAIKey != null
+                    ) {
+
+                        while (
+                                openAIKey.wasPressed()
+                        ) {
+
+                            toggleScreen(
+                                    client
+                            );
+                        }
+                    }
+                }
+        );
+    }
+
+    private static void assignAutomaticKey(
+            MinecraftClient client
+    ) {
+
+        int freeKey =
+                findFreeKey(
+                        client
+                );
+
+        if (
+                freeKey
+                == GLFW.GLFW_KEY_UNKNOWN
+        ) {
+
+            automaticKeyAssigned =
+                    true;
+
+            System.out.println(
+                    "[MinecraftAI] No se encontro una tecla libre. "
+                            + "Configurala desde Controles."
+            );
+
+            return;
+        }
+
+        InputUtil.Key key =
+                InputUtil.Type.KEYSYM
+                        .createFromCode(
+                                freeKey
+                        );
+
+        openAIKey.setBoundKey(
+                key
+        );
+
+        /*
+         * Reconstruye el mapa interno:
+         * tecla -> keybind.
+         */
+        KeyBinding.updateKeysByCode();
+
+        automaticKeyAssigned =
+                true;
+
+        System.out.println(
+                "[MinecraftAI] Tecla automatica asignada: "
+                        + openAIKey
+                                .getBoundKeyLocalizedText()
+                                .getString()
+        );
+    }
+
+    private static int findFreeKey(
+            MinecraftClient client
+    ) {
+
+        for (
+                int candidate :
+                KEY_CANDIDATES
+        ) {
+
+            if (
+                    !isKeyUsed(
+                            client,
+                            candidate
+                    )
+            ) {
+
+                return candidate;
+            }
+        }
+
+        return GLFW.GLFW_KEY_UNKNOWN;
+    }
+
+    private static boolean isKeyUsed(
+            MinecraftClient client,
+            int keyCode
+    ) {
+
+        if (
+                client.options == null
+        ) {
+            return true;
+        }
+
+        InputUtil.Key candidate =
+                InputUtil.Type.KEYSYM
+                        .createFromCode(
+                                keyCode
+                        );
+
+        String candidateId =
+                candidate
+                        .getTranslationKey();
+
+        for (
+                KeyBinding binding :
+                client.options.allKeys
+        ) {
+
+            if (
+                    binding == openAIKey
+            ) {
+                continue;
+            }
+
+            if (
+                    binding.isUnbound()
+            ) {
+                continue;
+            }
+
+            if (
+                    candidateId.equals(
+                            binding
+                                    .getBoundKeyTranslationKey()
+                    )
+            ) {
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void toggleScreen(
+            MinecraftClient client
+    ) {
+
+        if (
+                client.currentScreen
+                instanceof MinecraftAIScreen
+        ) {
+
+            client.setScreen(
+                    null
+            );
+
+            return;
+        }
+
+        if (
+                client.currentScreen
+                == null
+        ) {
+
+            client.setScreen(
+                    new MinecraftAIScreen()
+            );
+        }
+    }
+
+
+    // ========================================================
+    // NETWORKING
+    // ========================================================
+
+    private static void registerNetworking() {
+
+        ClientPlayNetworking.registerGlobalReceiver(
+                NetworkConstants.AI_STATUS,
+                (
+                        client,
+                        handler,
+                        buffer,
+                        responseSender
+                ) -> {
+
+                    String status =
+                            buffer.readString(
+                                    256
+                            );
+
+                    client.execute(
+                            () -> {
+
+                                AIOverlayState.setStatus(
+                                        status
+                                );
+
+                                AIOverlayState.setThinking(
+                                        !"Listo".equalsIgnoreCase(
+                                                status
+                                        )
+                                );
+                            }
+                    );
+                }
+        );
+
+        ClientPlayNetworking.registerGlobalReceiver(
+                NetworkConstants.AI_RESPONSE,
+                (
+                        client,
+                        handler,
+                        buffer,
+                        responseSender
+                ) -> {
+
+                    String content =
+                            buffer.readString(
+                                    32767
+                            );
+
+                    String provider =
+                            buffer.readString(
+                                    128
+                            );
+
+                    String model =
+                            buffer.readString(
+                                    128
+                            );
+
+                    long duration =
+                            buffer.readLong();
+
+                    client.execute(
+                            () -> {
+
+                                AIOverlayState.addAssistant(
+                                        content
+                                );
+
+                                AIOverlayState.setThinking(
+                                        false
+                                );
+
+                                AIOverlayState.setStatus(
+                                        "Listo"
+                                );
+
+                                System.out.println(
+                                        "[MinecraftAI] "
+                                                + provider
+                                                + " / "
+                                                + model
+                                                + " - "
+                                                + duration
+                                                + " ms"
+                                );
+                            }
+                    );
+                }
+        );
+    }
+
+
+    // ========================================================
+    // COMMAND /ai
+    // ========================================================
+
     private static void registerAICommand() {
 
         ClientCommandRegistrationCallback.EVENT.register(
-                (dispatcher, registryAccess) -> {
+                (
+                        dispatcher,
+                        registryAccess
+                ) -> {
 
                     dispatcher.register(
                             ClientCommandManager
-                                    .literal("ai")
+                                    .literal(
+                                            "ai"
+                                    )
 
-                                    .executes(context -> {
+                                    .executes(
+                                            context -> {
 
-                                        MinecraftClient client =
-                                                MinecraftClient.getInstance();
+                                                MinecraftClient client =
+                                                        MinecraftClient
+                                                                .getInstance();
 
-                                        if (client.player != null) {
+                                                if (
+                                                        client.player
+                                                        != null
+                                                ) {
 
-                                            client.player.sendMessage(
-                                                    Text.literal(
-                                                            "[AI] Usa: /ai <pregunta>"
-                                                    ),
-                                                    false
-                                            );
-                                        }
+                                                    client.setScreen(
+                                                            new MinecraftAIScreen()
+                                                    );
+                                                }
 
-                                        return 1;
-                                    })
+                                                return 1;
+                                            }
+                                    )
 
                                     .then(
                                             ClientCommandManager
                                                     .argument(
                                                             "pregunta",
-                                                            StringArgumentType.greedyString()
+                                                            StringArgumentType
+                                                                    .greedyString()
                                                     )
 
-                                                    .executes(context -> {
+                                                    .executes(
+                                                            context -> {
 
-                                                        String pregunta =
-                                                                StringArgumentType.getString(
-                                                                        context,
-                                                                        "pregunta"
+                                                                String question =
+                                                                        StringArgumentType
+                                                                                .getString(
+                                                                                        context,
+                                                                                        "pregunta"
+                                                                                );
+
+                                                                ask(
+                                                                        MinecraftClient
+                                                                                .getInstance(),
+                                                                        question
                                                                 );
 
-                                                        procesarPregunta(
-                                                                MinecraftClient.getInstance(),
-                                                                pregunta
-                                                        );
-
-                                                        return 1;
-                                                    })
+                                                                return 1;
+                                                            }
+                                                    )
                                     )
                     );
                 }
         );
     }
 
-    private static void procesarPregunta(
+
+    // ========================================================
+    // ASK
+    // ========================================================
+
+    public static void ask(
             MinecraftClient client,
-            String pregunta
+            String question
     ) {
 
         if (
                 client.player == null
                 || client.getNetworkHandler() == null
+                || question == null
+                || question.isBlank()
         ) {
             return;
         }
 
-        NativeImage screenshot = null;
-        NativeImage resized = null;
+        AIOverlayState.addUser(
+                question
+        );
+
+        AIOverlayState.setThinking(
+                true
+        );
+
+        AIOverlayState.setStatus(
+                "Observando..."
+        );
+
+        NativeImage screenshot =
+                null;
+
+        NativeImage resized =
+                null;
 
         try {
 
             screenshot =
-                    ScreenshotRecorder.takeScreenshot(
-                            client.getFramebuffer()
-                    );
+                    ScreenshotRecorder
+                            .takeScreenshot(
+                                    client.getFramebuffer()
+                            );
 
             int originalWidth =
                     screenshot.getWidth();
@@ -181,62 +561,70 @@ public class MinecraftAIClient
                     > MAX_IMAGE_SIZE
             ) {
 
-                client.player.sendMessage(
-                        Text.literal(
-                                "[AI] La captura pesa demasiado: "
-                                        + (pngBytes.length / 1024)
-                                        + " KB"
-                        ),
+                AIOverlayState.setThinking(
                         false
+                );
+
+                AIOverlayState.setStatus(
+                        "Error"
+                );
+
+                AIOverlayState.addSystem(
+                        "La captura pesa demasiado."
                 );
 
                 return;
             }
 
+            AIOverlayState.setStatus(
+                    "Enviando..."
+            );
+
             enviarPreguntaEnChunks(
-                    client,
-                    pregunta,
+                    question,
                     pngBytes
             );
 
-            client.player.sendMessage(
-                    Text.literal(
-                            "[AI] Enviando pregunta + imagen "
-                                    + targetWidth
-                                    + "x"
-                                    + targetHeight
-                                    + " ("
-                                    + (pngBytes.length / 1024)
-                                    + " KB)"
-                    ),
+        } catch (
+                IOException e
+        ) {
+
+            AIOverlayState.setThinking(
                     false
             );
 
-        } catch (IOException e) {
+            AIOverlayState.setStatus(
+                    "Error"
+            );
 
-            client.player.sendMessage(
-                    Text.literal(
-                            "[AI] Error preparando la captura."
-                    ),
-                    false
+            AIOverlayState.addSystem(
+                    "No pude preparar la captura."
             );
 
             e.printStackTrace();
 
         } finally {
 
-            if (resized != null) {
+            if (
+                    resized != null
+            ) {
                 resized.close();
             }
 
-            if (screenshot != null) {
+            if (
+                    screenshot != null
+            ) {
                 screenshot.close();
             }
         }
     }
 
+
+    // ========================================================
+    // CHUNKS
+    // ========================================================
+
     private static void enviarPreguntaEnChunks(
-            MinecraftClient client,
             String pregunta,
             byte[] image
     ) {
@@ -249,10 +637,6 @@ public class MinecraftAIClient
                         image.length
                                 / (double) CHUNK_SIZE
                 );
-
-        // -------------------------
-        // INICIO DE PETICION
-        // -------------------------
 
         PacketByteBuf beginBuffer =
                 PacketByteBufs.create();
@@ -279,10 +663,6 @@ public class MinecraftAIClient
                 beginBuffer
         );
 
-        // -------------------------
-        // CHUNKS DE IMAGEN
-        // -------------------------
-
         for (
                 int index = 0;
                 index < totalChunks;
@@ -290,7 +670,8 @@ public class MinecraftAIClient
         ) {
 
             int start =
-                    index * CHUNK_SIZE;
+                    index
+                            * CHUNK_SIZE;
 
             int end =
                     Math.min(
@@ -325,53 +706,5 @@ public class MinecraftAIClient
                     chunkBuffer
             );
         }
-    }
-
-    private static void registerDebugKey() {
-
-        aiKey =
-                KeyBindingHelper.registerKeyBinding(
-                        new KeyBinding(
-                                "key.minecraftai.debug_capture",
-                                InputUtil.Type.KEYSYM,
-                                GLFW.GLFW_KEY_V,
-                                "category.minecraftai"
-                        )
-                );
-
-        ClientTickEvents.END_CLIENT_TICK.register(
-                client -> {
-
-                    while (aiKey.wasPressed()) {
-                        debugCapture(client);
-                    }
-                }
-        );
-    }
-
-    private static void debugCapture(
-            MinecraftClient client
-    ) {
-
-        if (client.player == null) {
-            return;
-        }
-
-        NativeImage image =
-                ScreenshotRecorder.takeScreenshot(
-                        client.getFramebuffer()
-                );
-
-        client.player.sendMessage(
-                Text.literal(
-                        "[AI DEBUG] Captura: "
-                                + image.getWidth()
-                                + "x"
-                                + image.getHeight()
-                ),
-                false
-        );
-
-        image.close();
     }
 }
