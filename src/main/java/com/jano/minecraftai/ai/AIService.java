@@ -6,6 +6,7 @@ import com.jano.minecraftai.tools.ToolResult;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class AIService {
@@ -39,12 +40,14 @@ public class AIService {
                     @Override
                     public ToolResult execute(
                             String name,
-                            ServerPlayerEntity player
+                            ServerPlayerEntity player,
+                            Map<String, String> arguments
                     ) {
 
                         return ToolManager.execute(
                                 name,
-                                player
+                                player,
+                                arguments
                         );
                     }
                 }
@@ -77,7 +80,7 @@ public class AIService {
             ServerPlayerEntity player
     ) {
 
-        Set<String> usedTools =
+        Set<String> usedToolCalls =
                 new HashSet<>();
 
         long totalStart =
@@ -107,16 +110,12 @@ public class AIService {
                 return modelResponse;
             }
 
-            String toolName =
-                    ToolCallParser.parseToolName(
+            ToolCall toolCall =
+                    ToolCallParser.parse(
                             modelResponse.content
                     );
 
-            /*
-             * Si no pidió tool,
-             * es la respuesta final.
-             */
-            if (toolName == null) {
+            if (toolCall == null) {
 
                 return new AIResponse(
                         true,
@@ -128,43 +127,52 @@ public class AIService {
                 );
             }
 
-            /*
-             * Evitar loops.
-             */
-            if (usedTools.contains(toolName)) {
+            String signature =
+                    toolCall.name
+                            + "::"
+                            + toolCall.arguments;
+
+            if (
+                    usedToolCalls.contains(
+                            signature
+                    )
+            ) {
 
                 return AIResponse.failure(
                         modelResponse.provider,
                         modelResponse.model,
-                        "El modelo intentó ejecutar dos veces la misma tool: "
-                                + toolName,
+                        "El modelo intentó ejecutar dos veces la misma tool con los mismos argumentos: "
+                                + toolCall.name,
                         System.currentTimeMillis()
                                 - totalStart
                 );
             }
 
-            /*
-             * Comprobar existencia.
-             */
-            if (!toolGateway.exists(toolName)) {
+            if (
+                    !toolGateway.exists(
+                            toolCall.name
+                    )
+            ) {
 
                 return AIResponse.failure(
                         modelResponse.provider,
                         modelResponse.model,
                         "El modelo pidió una tool inexistente: "
-                                + toolName,
+                                + toolCall.name,
                         System.currentTimeMillis()
                                 - totalStart
                 );
             }
 
-            usedTools.add(
-                    toolName
+            usedToolCalls.add(
+                    signature
             );
 
             System.out.println(
                     "[MinecraftAI] Ejecutando tool: "
-                            + toolName
+                            + toolCall.name
+                            + " "
+                            + toolCall.arguments
             );
 
             long toolStart =
@@ -172,13 +180,14 @@ public class AIService {
 
             ToolResult toolResult =
                     toolGateway.execute(
-                            toolName,
-                            player
+                            toolCall.name,
+                            player,
+                            toolCall.arguments
                     );
 
             System.out.println(
                     "[MinecraftAI] Tool "
-                            + toolName
+                            + toolCall.name
                             + " terminada en "
                             + (
                                     System.currentTimeMillis()
@@ -188,7 +197,7 @@ public class AIService {
             );
 
             request.addToolResult(
-                    toolName,
+                    toolCall.name,
                     toolResult.content
             );
         }

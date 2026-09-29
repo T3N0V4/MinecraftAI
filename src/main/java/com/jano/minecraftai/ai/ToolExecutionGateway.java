@@ -4,6 +4,8 @@ import com.jano.minecraftai.tools.ToolResult;
 
 import net.minecraft.server.network.ServerPlayerEntity;
 
+import java.util.Map;
+
 public interface ToolExecutionGateway {
 
     boolean exists(
@@ -12,6 +14,7 @@ public interface ToolExecutionGateway {
 
     ToolResult execute(
             String name,
-            ServerPlayerEntity player
+            ServerPlayerEntity player,
+            Map<String, String> arguments
     );
 }

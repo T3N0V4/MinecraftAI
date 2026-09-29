@@ -36,10 +36,7 @@ public class AIServiceTest {
                     }
 
                     @Override
-                    public ToolResult execute(
-                            String name,
-                            ServerPlayerEntity player
-                    ) {
+                    public ToolResult execute(String name, ServerPlayerEntity player, java.util.Map<String, String> arguments) {
 
                         return ToolResult.success(
                                 """
@@ -142,10 +139,7 @@ public class AIServiceTest {
                     }
 
                     @Override
-                    public ToolResult execute(
-                            String name,
-                            ServerPlayerEntity player
-                    ) {
+                    public ToolResult execute(String name, ServerPlayerEntity player, java.util.Map<String, String> arguments) {
 
                         return ToolResult.success(
                                 "{\"entities\":[]}"

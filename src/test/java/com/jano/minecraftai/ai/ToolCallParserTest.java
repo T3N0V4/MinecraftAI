@@ -9,40 +9,73 @@ public class ToolCallParserTest {
     @Test
     void parsesValidToolCall() {
 
-        String tool =
-                ToolCallParser.parseToolName(
+        ToolCall call =
+                ToolCallParser.parse(
                         "{\"tool\":\"get_visible_entities\"}"
                 );
 
+        assertNotNull(
+                call
+        );
+
         assertEquals(
                 "get_visible_entities",
-                tool
+                call.name
+        );
+
+        assertTrue(
+                call.arguments.isEmpty()
+        );
+    }
+
+    @Test
+    void parsesToolArguments() {
+
+        ToolCall call =
+                ToolCallParser.parse(
+                        "{\"tool\":\"search_mod\",\"arguments\":{\"query\":\"create\"}}"
+                );
+
+        assertNotNull(
+                call
+        );
+
+        assertEquals(
+                "search_mod",
+                call.name
+        );
+
+        assertEquals(
+                "create",
+                call.arguments.get(
+                        "query"
+                )
         );
     }
 
     @Test
     void ignoresNormalAnswer() {
 
-        String tool =
-                ToolCallParser.parseToolName(
+        ToolCall call =
+                ToolCallParser.parse(
                         "Veo dos pandas."
                 );
 
         assertNull(
-                tool
+                call
         );
     }
 
     @Test
     void ignoresJsonWithExtraText() {
 
-        String tool =
-                ToolCallParser.parseToolName(
+        ToolCall call =
+                ToolCallParser.parse(
                         "Voy a consultar: {\"tool\":\"get_visible_entities\"}"
                 );
 
         assertNull(
-                tool
+                call
         );
     }
 }

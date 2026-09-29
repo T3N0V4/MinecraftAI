@@ -88,6 +88,19 @@ public class MinecraftAIPrompt {
                 get_recipes_using
                 Busca recetas reales que usan el objeto sostenido como ingrediente.
 
+                get_inventory
+                Obtiene el inventario real del jugador.
+
+                get_installed_mods
+                Obtiene la lista real de mods instalados.
+
+                search_mod
+                Busca mods instalados por nombre o id.
+                Requiere el argumento "query".
+
+                Ejemplo:
+                {"tool":"search_mod","arguments":{"query":"desert"}}
+
                 =============================
                 CÓMO USAR TOOLS
                 =============================
@@ -98,9 +111,15 @@ public class MinecraftAIPrompt {
                 Si necesitás una tool:
                 NO respondas todavía la pregunta.
 
-                Respondé ÚNICAMENTE con este JSON:
+                Respondé ÚNICAMENTE con JSON.
+
+                Si la tool no necesita argumentos:
 
                 {"tool":"NOMBRE_TOOL"}
+
+                Si necesita argumentos:
+
+                {"tool":"NOMBRE_TOOL","arguments":{"query":"valor"}}
 
                 No agregues texto antes ni después.
 
