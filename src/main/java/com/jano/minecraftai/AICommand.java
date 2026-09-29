@@ -1,5 +1,5 @@
 package com.jano.minecraftai;
-
+import com.jano.minecraftai.context.PlayerContext;
 import com.mojang.brigadier.CommandDispatcher;
 import com.jano.minecraftai.context.PlayerContextService;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -104,12 +104,15 @@ public class AICommand {
     private static void enviarContexto(
         ServerCommandSource source,
         ServerPlayerEntity player) {
-        String mensaje =
+
+        PlayerContext context =
                 PlayerContextService.getContext(player);
 
         source.sendFeedback(
-                () -> Text.literal(mensaje),
+                () -> Text.literal(
+                        context.toString()
+                ),
                 false
         );
-    }
+}
 }

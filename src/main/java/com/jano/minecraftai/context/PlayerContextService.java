@@ -1,104 +1,134 @@
 package com.jano.minecraftai.context;
 
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.state.property.Property;
 import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.LightType;
 import net.minecraft.world.biome.Biome;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class PlayerContextService {
 
-    public static String getContext(ServerPlayerEntity player) {
+public class PlayerContextService {
+
+    public static PlayerContext getContext(ServerPlayerEntity player) {
 
         ServerWorld world = player.getServerWorld();
 
-        // ==========================
-        // POSICIÓN
-        // ==========================
-
-        double x = player.getX();
-        double y = player.getY();
-        double z = player.getZ();
-
-        String dimension = world
-                .getRegistryKey()
-                .getValue()
-                .toString();
+        PlayerContext context = new PlayerContext();
 
         // ==========================
-        // BIOMA
+        // JUGADOR
         // ==========================
+
+        context.playerName =
+                player.getName().getString();
+
+        context.x = player.getX();
+        context.y = player.getY();
+        context.z = player.getZ();
+
+        context.dimension =
+                world.getRegistryKey()
+                        .getValue()
+                        .toString();
 
         RegistryEntry<Biome> biomeEntry =
                 world.getBiome(player.getBlockPos());
 
-        String biome = biomeEntry
-                .getKey()
-                .map(key -> key.getValue().toString())
-                .orElse("desconocido");
+        context.biome =
+                biomeEntry
+                        .getKey()
+                        .map(key -> key.getValue().toString())
+                        .orElse("desconocido");
 
-        // ==========================
-        // ESTADO DEL JUGADOR
-        // ==========================
-
-        float health = player.getHealth();
-        float maxHealth = player.getMaxHealth();
-
-        int hunger =
-                player.getHungerManager().getFoodLevel();
-
-        float saturation =
-                player.getHungerManager().getSaturationLevel();
-
-        int xpLevel =
-                player.experienceLevel;
-
-        String gameMode =
+        context.gameMode =
                 player.interactionManager
                         .getGameMode()
                         .getName();
 
         // ==========================
-        // MANOS
+        // ESTADO
         // ==========================
 
-        String mainHand =
-                itemToString(player.getMainHandStack());
+        context.health =
+                player.getHealth();
 
-        String offHand =
-                itemToString(player.getOffHandStack());
+        context.maxHealth =
+                player.getMaxHealth();
+
+        context.hunger =
+                player.getHungerManager()
+                        .getFoodLevel();
+
+        context.saturation =
+                player.getHungerManager()
+                        .getSaturationLevel();
+
+        context.xpLevel =
+                player.experienceLevel;
+
+        context.air =
+                player.getAir();
+
+        context.sprinting =
+                player.isSprinting();
+
+        context.sneaking =
+                player.isSneaking();
+
+        context.swimming =
+                player.isSwimming();
+
+        context.onGround =
+                player.isOnGround();
+
+        context.burning =
+                player.isOnFire();
+
+        context.direction =
+                player.getHorizontalFacing()
+                        .getName();
 
         // ==========================
-        // ARMADURA
+        // EQUIPO
         // ==========================
 
-        List<String> armor = new ArrayList<>();
+        context.mainHand =
+                itemToContext(
+                        player.getMainHandStack()
+                );
+
+        context.offHand =
+                itemToContext(
+                        player.getOffHandStack()
+                );
 
         for (ItemStack stack : player.getArmorItems()) {
 
             if (!stack.isEmpty()) {
-                armor.add(itemToString(stack));
+
+                context.armor.add(
+                        itemToContext(stack)
+                );
             }
         }
-
-        String armorText =
-                armor.isEmpty()
-                        ? "Ninguna"
-                        : String.join(", ", armor);
 
         // ==========================
         // EFECTOS
         // ==========================
-
-        List<String> effects = new ArrayList<>();
 
         for (
                 StatusEffectInstance effect :
@@ -110,107 +140,87 @@ public class PlayerContextService {
                             .getId(effect.getEffectType())
                             .toString();
 
-            effects.add(
+            int seconds =
+                    effect.getDuration() / 20;
+
+            context.effects.add(
                     effectId
                             + " nivel "
                             + (effect.getAmplifier() + 1)
+                            + " ("
+                            + seconds
+                            + "s)"
             );
         }
 
-        String effectsText =
-                effects.isEmpty()
-                        ? "Ninguno"
-                        : String.join(", ", effects);
-
         // ==========================
-        // BLOQUE APUNTADO
+        // OBJETIVO
         // ==========================
 
-        String targetBlock =
-                getTargetBlock(player);
+        context.target =
+                getTarget(player);
 
         // ==========================
         // MUNDO
         // ==========================
 
-        long worldTime =
+        context.worldTime =
                 world.getTimeOfDay() % 24000;
 
-        String weather;
-
         if (world.isThundering()) {
-            weather = "Tormenta";
+
+            context.weather =
+                    "Tormenta";
+
         } else if (world.isRaining()) {
-            weather = "Lluvia";
+
+            context.weather =
+                    "Lluvia";
+
         } else {
-            weather = "Despejado";
+
+            context.weather =
+                    "Despejado";
         }
 
-        // ==========================
-        // RESPUESTA
-        // ==========================
+        context.difficulty =
+                world.getDifficulty()
+                        .getName();
 
-        return "\n[AI] Contexto de "
-                + player.getName().getString()
+        int blockLight =
+                world.getLightLevel(
+                        LightType.BLOCK,
+                        player.getBlockPos()
+                );
 
-                + "\n• Posición: "
-                + String.format(
-                        "X %.1f | Y %.1f | Z %.1f",
-                        x,
-                        y,
-                        z
-                )
+        int skyLight =
+                world.getLightLevel(
+                        LightType.SKY,
+                        player.getBlockPos()
+                );
 
-                + "\n• Dimensión: "
-                + dimension
+        context.lightLevel =
+                Math.max(
+                        blockLight,
+                        skyLight
+                );
 
-                + "\n• Bioma: "
-                + biome
-
-                + "\n• Vida: "
-                + health
-                + "/"
-                + maxHealth
-
-                + "\n• Hambre: "
-                + hunger
-                + "/20"
-
-                + "\n• Saturación: "
-                + String.format("%.1f", saturation)
-
-                + "\n• XP: nivel "
-                + xpLevel
-
-                + "\n• Gamemode: "
-                + gameMode
-
-                + "\n• Mano principal: "
-                + mainHand
-
-                + "\n• Mano secundaria: "
-                + offHand
-
-                + "\n• Armadura: "
-                + armorText
-
-                + "\n• Efectos: "
-                + effectsText
-
-                + "\n• Mirando: "
-                + targetBlock
-
-                + "\n• Hora Minecraft: "
-                + worldTime
-
-                + "\n• Clima: "
-                + weather;
+        return context;
     }
 
-    private static String itemToString(ItemStack stack) {
+    private static ItemContext itemToContext(
+            ItemStack stack
+    ) {
 
         if (stack.isEmpty()) {
-            return "Vacío";
+
+            return new ItemContext(
+                    null,
+                    "Vacío",
+                    0,
+                    0,
+                    0
+            );
         }
 
         String id =
@@ -218,53 +228,209 @@ public class PlayerContextService {
                         .getId(stack.getItem())
                         .toString();
 
-        return stack.getName().getString()
-                + " x"
-                + stack.getCount()
-                + " ("
-                + id
-                + ")";
-    }
+        int maxDurability =
+                stack.getMaxDamage();
 
-    private static String getTargetBlock(
-            ServerPlayerEntity player
-    ) {
+        int durability = 0;
 
-        HitResult hit =
-                player.raycast(
-                        6.0,
-                        0.0f,
-                        false
-                );
+        if (maxDurability > 0) {
 
-        if (
-                hit.getType()
-                != HitResult.Type.BLOCK
-        ) {
-            return "Ningún bloque";
+            durability =
+                    maxDurability
+                    - stack.getDamage();
         }
 
-        BlockHitResult blockHit =
-                (BlockHitResult) hit;
+        return new ItemContext(
+                id,
+                stack.getName().getString(),
+                stack.getCount(),
+                durability,
+                maxDurability
+        );
+    }
 
-        BlockState state =
-                player.getWorld()
-                        .getBlockState(
-                                blockHit.getBlockPos()
+    private static TargetContext getTarget(
+        ServerPlayerEntity player
+        ) {
+
+            double maxDistance = 6.0;
+
+            Vec3d start =
+                    player.getCameraPosVec(1.0f);
+
+            Vec3d direction =
+                    player.getRotationVec(1.0f);
+
+            Vec3d end =
+                    start.add(
+                            direction.multiply(maxDistance)
+                    );
+
+            // ==========================
+            // BUSCAR ENTIDAD
+            // ==========================
+
+            Box searchBox =
+                    player.getBoundingBox()
+                            .stretch(
+                                    direction.multiply(maxDistance)
+                            )
+                            .expand(1.0);
+
+            EntityHitResult entityHit =
+                    ProjectileUtil.raycast(
+                            player,
+                            start,
+                            end,
+                            searchBox,
+                            entity ->
+                                    !entity.isSpectator()
+                                    && entity.canHit(),
+                            maxDistance * maxDistance
+                    );
+
+            // ==========================
+            // BUSCAR BLOQUE
+            // ==========================
+
+            HitResult blockHitRaw =
+                    player.raycast(
+                            maxDistance,
+                            0.0f,
+                            false
+                    );
+
+            double entityDistance =
+                    Double.MAX_VALUE;
+
+            if (entityHit != null) {
+                entityDistance =
+                        start.distanceTo(
+                                entityHit.getPos()
+                        );
+            }
+
+            double blockDistance =
+                    Double.MAX_VALUE;
+
+            if (
+                    blockHitRaw.getType()
+                    == HitResult.Type.BLOCK
+            ) {
+
+                blockDistance =
+                        start.distanceTo(
+                                blockHitRaw.getPos()
+                        );
+            }
+
+            // ==========================
+            // ENTIDAD ES LO MÁS CERCANO
+            // ==========================
+
+            if (
+                    entityHit != null
+                    && entityDistance < blockDistance
+            ) {
+
+                Entity entity =
+                        entityHit.getEntity();
+
+                String entityId =
+                        Registries.ENTITY_TYPE
+                                .getId(entity.getType())
+                                .toString();
+
+                TargetContext target =
+                        new TargetContext(
+                                "entity",
+                                entityId,
+                                entity.getName()
+                                        .getString(),
+                                entity.getBlockX(),
+                                entity.getBlockY(),
+                                entity.getBlockZ(),
+                                entityDistance
                         );
 
-        String blockId =
-                Registries.BLOCK
-                        .getId(state.getBlock())
-                        .toString();
+                if (entity instanceof LivingEntity living) {
 
-        return state.getBlock()
-                .getName()
-                .getString()
-                + " ("
-                + blockId
-                + ")"
-                + " en "
-                + blockHit.getBlockPos().toShortString();
+                    target.health =
+                            living.getHealth();
+
+                    target.maxHealth =
+                            living.getMaxHealth();
+                }
+
+                return target;
+            }
+
+            // ==========================
+            // BLOQUE
+            // ==========================
+
+            if (
+                    blockHitRaw.getType()
+                    == HitResult.Type.BLOCK
+            ) {
+
+                BlockHitResult blockHit =
+                        (BlockHitResult) blockHitRaw;
+
+                BlockState state =
+                        player.getWorld()
+                                .getBlockState(
+                                        blockHit.getBlockPos()
+                                );
+
+                String blockId =
+                        Registries.BLOCK
+                                .getId(state.getBlock())
+                                .toString();
+
+                TargetContext target =
+                        new TargetContext(
+                                "block",
+                                blockId,
+                                state.getBlock()
+                                        .getName()
+                                        .getString(),
+                                blockHit.getBlockPos()
+                                        .getX(),
+                                blockHit.getBlockPos()
+                                        .getY(),
+                                blockHit.getBlockPos()
+                                        .getZ(),
+                                blockDistance
+                        );
+
+                for (
+                        Property<?> property :
+                        state.getProperties()
+                ) {
+
+                    target.properties.put(
+                            property.getName(),
+                            getPropertyValue(
+                                    state,
+                                    property
+                            )
+                    );
+                }
+
+                return target;
+            }
+
+            return TargetContext.none();
+    }
+    private static <T extends Comparable<T>>
+    String getPropertyValue(
+            BlockState state,
+            Property<T> property
+    ) {
+
+        return property.name(
+                state.get(property)
+        );
     }
 }
