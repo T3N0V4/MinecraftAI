@@ -21,8 +21,6 @@ import net.minecraft.world.biome.Biome;
 
 public class PlayerContextService {
 
-public class PlayerContextService {
-
     public static PlayerContext getContext(ServerPlayerEntity player) {
 
         ServerWorld world = player.getServerWorld();
