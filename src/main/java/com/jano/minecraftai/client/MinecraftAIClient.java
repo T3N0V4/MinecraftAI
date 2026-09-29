@@ -26,13 +26,28 @@ import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.UUID;
 
 public class MinecraftAIClient
         implements ClientModInitializer {
 
-    private static KeyBinding aiKey;
+    private static final int MAX_WIDTH =
+            640;
 
-    private static final int MAX_WIDTH = 640;
+    /*
+     * Minecraft 1.20.1 limita mucho el tamaño
+     * de cada custom payload.
+     *
+     * Dejamos margen usando chunks de 24 KB.
+     */
+    private static final int CHUNK_SIZE =
+            24_000;
+
+    private static final int MAX_IMAGE_SIZE =
+            1_000_000;
+
+    private static KeyBinding aiKey;
 
     @Override
     public void onInitializeClient() {
@@ -57,8 +72,7 @@ public class MinecraftAIClient
                                     .executes(context -> {
 
                                         MinecraftClient client =
-                                                MinecraftClient
-                                                        .getInstance();
+                                                MinecraftClient.getInstance();
 
                                         if (client.player != null) {
 
@@ -77,22 +91,19 @@ public class MinecraftAIClient
                                             ClientCommandManager
                                                     .argument(
                                                             "pregunta",
-                                                            StringArgumentType
-                                                                    .greedyString()
+                                                            StringArgumentType.greedyString()
                                                     )
 
                                                     .executes(context -> {
 
                                                         String pregunta =
-                                                                StringArgumentType
-                                                                        .getString(
-                                                                                context,
-                                                                                "pregunta"
-                                                                        );
+                                                                StringArgumentType.getString(
+                                                                        context,
+                                                                        "pregunta"
+                                                                );
 
                                                         procesarPregunta(
-                                                                MinecraftClient
-                                                                        .getInstance(),
+                                                                MinecraftClient.getInstance(),
                                                                 pregunta
                                                         );
 
@@ -109,7 +120,10 @@ public class MinecraftAIClient
             String pregunta
     ) {
 
-        if (client.player == null) {
+        if (
+                client.player == null
+                || client.getNetworkHandler() == null
+        ) {
             return;
         }
 
@@ -119,10 +133,9 @@ public class MinecraftAIClient
         try {
 
             screenshot =
-                    ScreenshotRecorder
-                            .takeScreenshot(
-                                    client.getFramebuffer()
-                            );
+                    ScreenshotRecorder.takeScreenshot(
+                            client.getFramebuffer()
+                    );
 
             int originalWidth =
                     screenshot.getWidth();
@@ -163,34 +176,37 @@ public class MinecraftAIClient
             byte[] pngBytes =
                     resized.getBytes();
 
-            PacketByteBuf buffer =
-                    PacketByteBufs.create();
+            if (
+                    pngBytes.length
+                    > MAX_IMAGE_SIZE
+            ) {
 
-            buffer.writeString(
+                client.player.sendMessage(
+                        Text.literal(
+                                "[AI] La captura pesa demasiado: "
+                                        + (pngBytes.length / 1024)
+                                        + " KB"
+                        ),
+                        false
+                );
+
+                return;
+            }
+
+            enviarPreguntaEnChunks(
+                    client,
                     pregunta,
-                    2048
-            );
-
-            buffer.writeByteArray(
                     pngBytes
             );
 
-            ClientPlayNetworking.send(
-                    NetworkConstants.ASK_AI,
-                    buffer
-            );
-
-            int kb =
-                    pngBytes.length / 1024;
-
             client.player.sendMessage(
                     Text.literal(
-                            "[AI] Enviando pregunta + imagen ("
+                            "[AI] Enviando pregunta + imagen "
                                     + targetWidth
                                     + "x"
                                     + targetHeight
-                                    + ", "
-                                    + kb
+                                    + " ("
+                                    + (pngBytes.length / 1024)
                                     + " KB)"
                     ),
                     false
@@ -200,7 +216,7 @@ public class MinecraftAIClient
 
             client.player.sendMessage(
                     Text.literal(
-                            "[AI] Error preparando la imagen."
+                            "[AI] Error preparando la captura."
                     ),
                     false
             );
@@ -219,32 +235,118 @@ public class MinecraftAIClient
         }
     }
 
+    private static void enviarPreguntaEnChunks(
+            MinecraftClient client,
+            String pregunta,
+            byte[] image
+    ) {
+
+        UUID requestId =
+                UUID.randomUUID();
+
+        int totalChunks =
+                (int) Math.ceil(
+                        image.length
+                                / (double) CHUNK_SIZE
+                );
+
+        // -------------------------
+        // INICIO DE PETICION
+        // -------------------------
+
+        PacketByteBuf beginBuffer =
+                PacketByteBufs.create();
+
+        beginBuffer.writeUuid(
+                requestId
+        );
+
+        beginBuffer.writeString(
+                pregunta,
+                2048
+        );
+
+        beginBuffer.writeInt(
+                image.length
+        );
+
+        beginBuffer.writeInt(
+                totalChunks
+        );
+
+        ClientPlayNetworking.send(
+                NetworkConstants.ASK_BEGIN,
+                beginBuffer
+        );
+
+        // -------------------------
+        // CHUNKS DE IMAGEN
+        // -------------------------
+
+        for (
+                int index = 0;
+                index < totalChunks;
+                index++
+        ) {
+
+            int start =
+                    index * CHUNK_SIZE;
+
+            int end =
+                    Math.min(
+                            start + CHUNK_SIZE,
+                            image.length
+                    );
+
+            byte[] chunk =
+                    Arrays.copyOfRange(
+                            image,
+                            start,
+                            end
+                    );
+
+            PacketByteBuf chunkBuffer =
+                    PacketByteBufs.create();
+
+            chunkBuffer.writeUuid(
+                    requestId
+            );
+
+            chunkBuffer.writeInt(
+                    index
+            );
+
+            chunkBuffer.writeByteArray(
+                    chunk
+            );
+
+            ClientPlayNetworking.send(
+                    NetworkConstants.ASK_CHUNK,
+                    chunkBuffer
+            );
+        }
+    }
+
     private static void registerDebugKey() {
 
         aiKey =
-                KeyBindingHelper
-                        .registerKeyBinding(
-                                new KeyBinding(
-                                        "key.minecraftai.debug_capture",
-                                        InputUtil.Type.KEYSYM,
-                                        GLFW.GLFW_KEY_V,
-                                        "category.minecraftai"
-                                )
-                        );
-
-        ClientTickEvents
-                .END_CLIENT_TICK
-                .register(
-                        client -> {
-
-                            while (
-                                    aiKey.wasPressed()
-                            ) {
-
-                                debugCapture(client);
-                            }
-                        }
+                KeyBindingHelper.registerKeyBinding(
+                        new KeyBinding(
+                                "key.minecraftai.debug_capture",
+                                InputUtil.Type.KEYSYM,
+                                GLFW.GLFW_KEY_V,
+                                "category.minecraftai"
+                        )
                 );
+
+        ClientTickEvents.END_CLIENT_TICK.register(
+                client -> {
+
+                    while (aiKey.wasPressed()) {
+                        debugCapture(client);
+                    }
+                }
+        );
     }
 
     private static void debugCapture(
@@ -256,10 +358,9 @@ public class MinecraftAIClient
         }
 
         NativeImage image =
-                ScreenshotRecorder
-                        .takeScreenshot(
-                                client.getFramebuffer()
-                        );
+                ScreenshotRecorder.takeScreenshot(
+                        client.getFramebuffer()
+                );
 
         client.player.sendMessage(
                 Text.literal(

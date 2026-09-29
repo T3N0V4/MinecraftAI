@@ -4,10 +4,16 @@ import net.minecraft.util.Identifier;
 
 public class NetworkConstants {
 
-    public static final Identifier ASK_AI =
+    public static final Identifier ASK_BEGIN =
             new Identifier(
                     "minecraftai",
-                    "ask_ai"
+                    "ask_begin"
+            );
+
+    public static final Identifier ASK_CHUNK =
+            new Identifier(
+                    "minecraftai",
+                    "ask_chunk"
             );
 
     private NetworkConstants() {
