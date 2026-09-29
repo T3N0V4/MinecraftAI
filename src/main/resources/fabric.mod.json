@@ -9,12 +9,18 @@
   ],
   "contact": {},
   "license": "MIT",
-  "environment": "server",
+
+  "environment": "*",
+
   "entrypoints": {
     "main": [
       "com.jano.minecraftai.MinecraftAIMod"
+    ],
+    "client": [
+      "com.jano.minecraftai.client.MinecraftAIClient"
     ]
   },
+
   "depends": {
     "fabricloader": ">=0.16.14",
     "minecraft": "1.20.1",
