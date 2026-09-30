@@ -3,11 +3,9 @@ package com.jano.minecraftai.client;
 public final class MinecraftAIAnimation {
 
     public enum Curve {
-        LINEAR,
         EASE_OUT_CUBIC,
         EASE_IN_OUT_CUBIC,
-        EASE_OUT_QUINT,
-        EASE_OUT_BACK
+        EASE_OUT_QUINT
     }
 
 
@@ -134,46 +132,11 @@ public final class MinecraftAIAnimation {
         }
 
 
-        public float getFloat() {
-
-            return (float) get();
-        }
-
-
-        public int getInt() {
-
-            return (int) Math.round(
-                    get()
-            );
-        }
-
-
         public boolean isRunning() {
 
             get();
 
             return running;
-        }
-
-
-        public void snap(
-                double value
-        ) {
-
-            from =
-                    value;
-
-            to =
-                    value;
-
-            running =
-                    false;
-        }
-
-
-        public double getTarget() {
-
-            return to;
         }
     }
 
@@ -191,9 +154,6 @@ public final class MinecraftAIAnimation {
         return switch (
                 curve
         ) {
-
-            case LINEAR ->
-                    t;
 
             case EASE_OUT_CUBIC ->
                     1.0
@@ -222,27 +182,6 @@ public final class MinecraftAIAnimation {
                                     1.0 - t,
                                     5.0
                             );
-
-            case EASE_OUT_BACK -> {
-
-                double c1 =
-                        1.70158;
-
-                double c3 =
-                        c1 + 1.0;
-
-                yield 1.0
-                        + c3
-                                * Math.pow(
-                                        t - 1.0,
-                                        3.0
-                                )
-                        + c1
-                                * Math.pow(
-                                        t - 1.0,
-                                        2.0
-                                );
-            }
         };
     }
 
@@ -258,36 +197,6 @@ public final class MinecraftAIAnimation {
                         to - from
                 )
                 * progress;
-    }
-
-
-    public static float lerp(
-            float from,
-            float to,
-            float progress
-    ) {
-
-        return from
-                + (
-                        to - from
-                )
-                * progress;
-    }
-
-
-    public static int lerpInt(
-            int from,
-            int to,
-            double progress
-    ) {
-
-        return (int) Math.round(
-                lerp(
-                        from,
-                        to,
-                        progress
-                )
-        );
     }
 
 
