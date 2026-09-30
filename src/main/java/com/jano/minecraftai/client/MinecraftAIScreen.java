@@ -187,6 +187,24 @@ public class MinecraftAIScreen
     ) {
 
         if (
+                MinecraftAIClient.isOpenKey(
+                        keyCode,
+                        scanCode
+                )
+        ) {
+
+            if (
+                    client != null
+            ) {
+                client.setScreen(
+                        null
+                );
+            }
+
+            return true;
+        }
+
+        if (
                 keyCode
                 == GLFW.GLFW_KEY_ENTER
         ) {

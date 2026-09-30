@@ -47,3 +47,8 @@ config/minecraft-ai.json
 *.tmp
 *.temp
 *.bak
+
+.venv/
+__pycache__/
+*.pyc
+voice/*.wav

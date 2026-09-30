@@ -277,6 +277,19 @@ public class MinecraftAIClient
         return false;
     }
 
+
+    public static boolean isOpenKey(
+            int keyCode,
+            int scanCode
+    ) {
+
+        return openAIKey != null
+                && openAIKey.matchesKey(
+                        keyCode,
+                        scanCode
+                );
+    }
+
     private static void toggleScreen(
             MinecraftClient client
     ) {
