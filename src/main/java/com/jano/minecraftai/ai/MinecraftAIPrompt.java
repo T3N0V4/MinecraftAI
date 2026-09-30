@@ -133,7 +133,19 @@ public class MinecraftAIPrompt {
                 No vuelvas a pedir la misma tool si ya tenés su resultado.
 
                 =============================
-                PREGUNTA
+                CONVERSACIÓN PREVIA
+                =============================
+
+                %s
+
+                Usá esta conversación solamente para entender referencias
+                como "sí", "eso", "lo de antes", "hacelo" o preguntas de seguimiento.
+
+                La pregunta actual y los datos reales del servidor
+                tienen prioridad sobre el historial.
+
+                =============================
+                PREGUNTA ACTUAL
                 =============================
 
                 %s
@@ -151,6 +163,7 @@ public class MinecraftAIPrompt {
                 %s
                 """
                 .formatted(
+                        request.conversationHistory,
                         request.question,
                         request.playerContext.toString(),
                         request.getToolResultsText()

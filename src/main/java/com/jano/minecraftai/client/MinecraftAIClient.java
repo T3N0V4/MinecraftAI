@@ -72,6 +72,9 @@ public class MinecraftAIClient
 
         registerNetworking();
 
+        MinecraftAISTTProcess.register();
+        MinecraftAIVoiceClient.register();
+
         MinecraftAIHud.register();
 
         /*

@@ -200,18 +200,13 @@ def stop_recording():
     )
 
     segments, info = model.transcribe(
-    audio_16k,
-    language="es",
-    beam_size=1,
-    temperature=0.0,
-    vad_filter=True,
-    vad_parameters={
-        "min_silence_duration_ms": 350,
-        "speech_pad_ms": 150
-    },
-    condition_on_previous_text=False,
-    initial_prompt=INITIAL_PROMPT
-)
+        audio_16k,
+        language="es",
+        beam_size=1,
+        vad_filter=True,
+        condition_on_previous_text=False,
+        initial_prompt=INITIAL_PROMPT
+    )
 
     text = "".join(
         segment.text

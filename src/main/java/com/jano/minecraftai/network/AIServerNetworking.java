@@ -4,6 +4,7 @@ import com.jano.minecraftai.ai.AIModelRouter;
 import com.jano.minecraftai.ai.AIRequest;
 import com.jano.minecraftai.ai.AIResponse;
 import com.jano.minecraftai.ai.AIService;
+import com.jano.minecraftai.ai.ConversationMemory;
 
 import com.jano.minecraftai.ai.providers.DebugProvider;
 import com.jano.minecraftai.ai.providers.GeminiProvider;
@@ -49,6 +50,9 @@ public class AIServerNetworking {
             new ConcurrentHashMap<>();
 
     private static final AIService aiService;
+
+    private static final ConversationMemory conversationMemory =
+            new ConversationMemory();
 
     static {
 
@@ -246,11 +250,17 @@ public class AIServerNetworking {
                     PlayerContextService
                             .getContext(player);
 
+            String conversationHistory =
+                    conversationMemory.getHistoryText(
+                            player.getUuid()
+                    );
+
             AIRequest request =
                     new AIRequest(
                             pregunta,
                             imagen,
-                            context
+                            context,
+                            conversationHistory
                     );
 
             sendStatus(player, "Pensando...");
@@ -267,6 +277,27 @@ public class AIServerNetworking {
                                     player.isDisconnected()
                             ) {
                                 return;
+                            }
+
+                            if (
+                                    response != null
+                                    && response.success
+                                    && response.content != null
+                                    && !response.content.isBlank()
+                                    && "gemini".equalsIgnoreCase(
+                                            response.provider
+                                    )
+                            ) {
+
+                                conversationMemory.addUser(
+                                        player.getUuid(),
+                                        pregunta
+                                );
+
+                                conversationMemory.addAssistant(
+                                        player.getUuid(),
+                                        response.content
+                                );
                             }
 
                             sendResponse(player, response);

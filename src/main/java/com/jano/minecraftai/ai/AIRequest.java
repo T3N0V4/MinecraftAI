@@ -10,6 +10,7 @@ public class AIRequest {
     public final String question;
     public final byte[] image;
     public final PlayerContext playerContext;
+    public final String conversationHistory;
 
     public final List<String> toolResults =
             new ArrayList<>();
@@ -20,6 +21,21 @@ public class AIRequest {
             PlayerContext playerContext
     ) {
 
+        this(
+                question,
+                image,
+                playerContext,
+                "Sin conversación previa."
+        );
+    }
+
+    public AIRequest(
+            String question,
+            byte[] image,
+            PlayerContext playerContext,
+            String conversationHistory
+    ) {
+
         this.question =
                 question;
 
@@ -28,6 +44,12 @@ public class AIRequest {
 
         this.playerContext =
                 playerContext;
+
+        this.conversationHistory =
+                conversationHistory == null
+                        || conversationHistory.isBlank()
+                        ? "Sin conversación previa."
+                        : conversationHistory;
     }
 
     public void addToolResult(
