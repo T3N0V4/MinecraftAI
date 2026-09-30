@@ -21,10 +21,6 @@ public final class ToolFastPathRouter {
                         question
                 );
 
-
-        /*
-         * ESTRUCTURA / UBICACIÓN
-         */
         if (
                 q.contains("en que estructura estoy")
                 || q.contains("que estructura es esta")
@@ -33,10 +29,6 @@ public final class ToolFastPathRouter {
             return "get_current_structure";
         }
 
-
-        /*
-         * BLOQUE
-         */
         if (
                 q.contains("que bloque estoy mirando")
                 || q.contains("que bloque es este")
@@ -45,10 +37,6 @@ public final class ToolFastPathRouter {
             return "get_target_block";
         }
 
-
-        /*
-         * ENTIDAD / MOB
-         */
         if (
                 q.contains("que entidad estoy mirando")
                 || q.contains("que mob estoy mirando")
@@ -58,10 +46,6 @@ public final class ToolFastPathRouter {
             return "get_target_entity";
         }
 
-
-        /*
-         * MANOS
-         */
         if (
                 q.contains("que tengo en la mano")
                 || q.contains("que estoy sosteniendo")
@@ -70,10 +54,6 @@ public final class ToolFastPathRouter {
             return "get_held_item";
         }
 
-
-        /*
-         * INVENTARIO
-         */
         if (
                 q.contains("que tengo en el inventario")
                 || q.contains("que hay en mi inventario")
@@ -82,36 +62,8 @@ public final class ToolFastPathRouter {
             return "get_inventory";
         }
 
-
-        /*
-         * MOD DE ORIGEN
-         */
-        if (
-                q.contains("de que mod es esto")
-                || q.contains("de que mod es este bloque")
-                || q.contains("de que mod es esta entidad")
-                || q.contains("de que mod es este objeto")
-        ) {
-            return "get_mod_origin";
-        }
-
-
-        /*
-         * MODS INSTALADOS
-         */
-        if (
-                q.contains("cuantos mods")
-                || q.contains("que mods hay")
-                || q.contains("mods instalados")
-                || q.contains("lista de mods")
-        ) {
-            return "get_installed_mods";
-        }
-
-
         return null;
     }
-
 
     private static String normalize(
             String text
@@ -123,30 +75,13 @@ public final class ToolFastPathRouter {
                         Normalizer.Form.NFD
                 );
 
-        normalized =
-                normalized.replaceAll(
-                        "\\p{M}",
-                        ""
-                );
-
-        normalized =
-                normalized
-                        .toLowerCase(
-                                Locale.ROOT
-                        )
-                        .replaceAll(
-                                "[^a-z0-9 ]",
-                                " "
-                        )
-                        .replaceAll(
-                                "\\s+",
-                                " "
-                        )
-                        .trim();
-
-        return normalized;
+        return normalized
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
-
 
     private ToolFastPathRouter() {
     }

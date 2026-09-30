@@ -66,14 +66,6 @@ public class AIService {
                 toolGateway;
     }
 
-    public AIResponse respond(
-            AIRequest request
-    ) {
-
-        return router.respond(
-                request
-        );
-    }
 
     public AIResponse respondWithTools(
             AIRequest request,

@@ -33,19 +33,31 @@ public class MinecraftAIPromptBehaviorTest {
 
         assertTrue(
                 prompt.contains(
-                        "NO significa que el bloque pertenezca a ese mod"
+                        "Estar dentro de una estructura de un mod"
                 )
         );
 
         assertTrue(
                 prompt.contains(
-                        "minecraft:cut_sandstone"
+                        "NO significa que el bloque, objeto o entidad"
                 )
         );
 
         assertTrue(
                 prompt.contains(
-                        "el bloque es vanilla de Minecraft"
+                        "pertenezca a ese mod"
+                )
+        );
+
+        assertTrue(
+                prompt.contains(
+                        "minecraft:"
+                )
+        );
+
+        assertTrue(
+                prompt.contains(
+                        "es contenido vanilla"
                 )
         );
     }

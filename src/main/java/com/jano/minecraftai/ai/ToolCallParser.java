@@ -89,17 +89,6 @@ public class ToolCallParser {
         );
     }
 
-    public static String parseToolName(
-            String content
-    ) {
-
-        ToolCall call =
-                parse(content);
-
-        return call == null
-                ? null
-                : call.name;
-    }
 
     private static String unescape(
             String value

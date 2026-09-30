@@ -1,6 +1,5 @@
 package com.jano.minecraftai.client;
 
-import com.jano.minecraftai.ai.QuestionRoute;
 import com.jano.minecraftai.ai.ToolFastPathRouter;
 import com.jano.minecraftai.network.NetworkConstants;
 import com.mojang.brigadier.arguments.StringArgumentType;
