@@ -1,6 +1,7 @@
 package com.jano.minecraftai.debug.ui;
 
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -13,6 +14,9 @@ public class DebugStatusIndicator
 
     private Color color;
 
+    private double time =
+            0.0;
+
     public DebugStatusIndicator(
             Color color
     ) {
@@ -20,9 +24,7 @@ public class DebugStatusIndicator
         this.color =
                 color;
 
-        setOpaque(
-                false
-        );
+        setOpaque(false);
 
         setPreferredSize(
                 new Dimension(
@@ -30,6 +32,17 @@ public class DebugStatusIndicator
                         14
                 )
         );
+
+        Timer timer =
+                new Timer(
+                        35,
+                        e -> {
+                            time += 0.08;
+                            repaint();
+                        }
+                );
+
+        timer.start();
     }
 
     public void setColor(
@@ -55,31 +68,40 @@ public class DebugStatusIndicator
                 RenderingHints.VALUE_ANTIALIAS_ON
         );
 
+        double pulse =
+                0.5
+                        + 0.5
+                        * Math.sin(time);
+
+        int halo =
+                9
+                        + (int) (
+                        pulse * 3
+                );
+
         g2.setColor(
                 new Color(
                         color.getRed(),
                         color.getGreen(),
                         color.getBlue(),
-                        45
+                        40
                 )
         );
 
         g2.fillOval(
-                0,
-                0,
-                getWidth(),
-                getHeight()
+                7 - halo / 2,
+                7 - halo / 2,
+                halo,
+                halo
         );
 
-        g2.setColor(
-                color
-        );
+        g2.setColor(color);
 
         g2.fillOval(
-                4,
-                4,
-                getWidth() - 8,
-                getHeight() - 8
+                5,
+                5,
+                5,
+                5
         );
 
         g2.dispose();

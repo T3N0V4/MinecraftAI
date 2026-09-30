@@ -4,23 +4,21 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.Timer;
 
-import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
-import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 
 public class DebugHeaderPanel
         extends DebugCard {
 
     private final JLabel mainStatus =
             new JLabel(
-                    "INITIALIZING"
+                    "Listo"
             );
+
+    private final AIOrbPanel orb =
+            new AIOrbPanel();
 
     private final DebugStatusIndicator geminiIndicator =
             new DebugStatusIndicator(
@@ -32,32 +30,26 @@ public class DebugHeaderPanel
                     DebugTheme.WARNING
             );
 
-    private float pulse =
-            0f;
-
-    private boolean pulseForward =
-            true;
-
-    private int scanX =
-            0;
-
-    private final Timer animationTimer;
-
     public DebugHeaderPanel() {
 
         setLayout(
                 new BorderLayout(
-                        16,
+                        20,
                         0
+                )
+        );
+
+        setPreferredSize(
+                new Dimension(
+                        100,
+                        98
                 )
         );
 
         JPanel titles =
                 new JPanel();
 
-        titles.setOpaque(
-                false
-        );
+        titles.setOpaque(false);
 
         titles.setLayout(
                 new BoxLayout(
@@ -68,7 +60,7 @@ public class DebugHeaderPanel
 
         JLabel title =
                 new JLabel(
-                        "MinecraftAI Debug Console"
+                        "MinecraftAI Debug"
                 );
 
         title.setForeground(
@@ -81,7 +73,7 @@ public class DebugHeaderPanel
 
         JLabel subtitle =
                 new JLabel(
-                        "Context Engine · Scenario Lab"
+                        "Playground de contexto, memoria, tools y prompt"
                 );
 
         subtitle.setForeground(
@@ -93,82 +85,108 @@ public class DebugHeaderPanel
         );
 
         titles.add(
-                title
+                Box.createVerticalGlue()
         );
+
+        titles.add(title);
 
         titles.add(
                 Box.createVerticalStrut(
-                        2
+                        5
                 )
         );
 
+        titles.add(subtitle);
+
         titles.add(
-                subtitle
+                Box.createVerticalGlue()
         );
 
-        JPanel status =
+        JPanel right =
                 new JPanel(
-                        new FlowLayout(
-                                FlowLayout.RIGHT,
-                                8,
+                        new BorderLayout(
+                                12,
                                 0
                         )
                 );
 
-        status.setOpaque(
-                false
+        right.setOpaque(false);
+
+        orb.setPreferredSize(
+                new Dimension(
+                        92,
+                        82
+                )
         );
 
-        JLabel gemini =
-                new JLabel(
-                        "Gemini"
-                );
+        JPanel status =
+                new JPanel();
 
-        gemini.setForeground(
-                DebugTheme.TEXT_MUTED
-        );
+        status.setOpaque(false);
 
-        JLabel stt =
-                new JLabel(
-                        "STT"
-                );
-
-        stt.setForeground(
-                DebugTheme.TEXT_MUTED
+        status.setLayout(
+                new BoxLayout(
+                        status,
+                        BoxLayout.Y_AXIS
+                )
         );
 
         mainStatus.setForeground(
-                DebugTheme.ACCENT
+                DebugTheme.SUCCESS
         );
 
         mainStatus.setFont(
-                DebugTheme.SECTION
-        );
-
-        status.add(
-                mainStatus
-        );
-
-        status.add(
-                Box.createHorizontalStrut(
-                        10
+                new java.awt.Font(
+                        "Segoe UI",
+                        java.awt.Font.BOLD,
+                        14
                 )
         );
 
         status.add(
-                geminiIndicator
+                Box.createVerticalGlue()
+        );
+
+        status.add(mainStatus);
+
+        status.add(
+                Box.createVerticalStrut(
+                        8
+                )
         );
 
         status.add(
-                gemini
+                createStatusRow(
+                        geminiIndicator,
+                        "Gemini"
+                )
         );
 
         status.add(
-                sttIndicator
+                Box.createVerticalStrut(
+                        3
+                )
         );
 
         status.add(
-                stt
+                createStatusRow(
+                        sttIndicator,
+                        "STT"
+                )
+        );
+
+        status.add(
+                Box.createVerticalGlue()
+        );
+
+        right.add(
+                orb,
+                BorderLayout.WEST
+        );
+
+        right.add(
+                status,
+                BorderLayout.CENTER
         );
 
         add(
@@ -177,183 +195,185 @@ public class DebugHeaderPanel
         );
 
         add(
-                status,
+                right,
                 BorderLayout.EAST
         );
-
-        animationTimer =
-                new Timer(
-                        35,
-                        e -> animate()
-                );
-
-        animationTimer.start();
     }
 
-    private void animate() {
-
-        if (
-                pulseForward
-        ) {
-
-            pulse +=
-                    0.02f;
-
-            if (
-                    pulse >= 1f
-            ) {
-
-                pulse =
-                        1f;
-
-                pulseForward =
-                        false;
-            }
-
-        } else {
-
-            pulse -=
-                    0.02f;
-
-            if (
-                    pulse <= 0f
-            ) {
-
-                pulse =
-                        0f;
-
-                pulseForward =
-                        true;
-            }
-        }
-
-        scanX +=
-                4;
-
-        if (
-                scanX > getWidth() + 120
-        ) {
-
-            scanX =
-                    -120;
-        }
-
-        repaint();
-    }
-
-    @Override
-    protected void paintComponent(
-            Graphics g
+    private JPanel createStatusRow(
+            DebugStatusIndicator indicator,
+            String text
     ) {
 
-        super.paintComponent(
-                g
-        );
-
-        Graphics2D g2 =
-                (Graphics2D) g.create();
-
-        g2.setRenderingHint(
-                RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON
-        );
-
-        float glowAlpha =
-                0.10f
-                        + pulse
-                        * 0.16f;
-
-        g2.setComposite(
-                AlphaComposite.getInstance(
-                        AlphaComposite.SRC_OVER,
-                        glowAlpha
-                )
-        );
-
-        g2.setColor(
-                DebugTheme.ACCENT
-        );
-
-        g2.fillRoundRect(
-                8,
-                getHeight() - 5,
-                getWidth() - 16,
-                2,
-                8,
-                8
-        );
-
-        g2.setComposite(
-                AlphaComposite.getInstance(
-                        AlphaComposite.SRC_OVER,
-                        0.75f
-                )
-        );
-
-        Color scanColor =
-                new Color(
-                        DebugTheme.ACCENT.getRed(),
-                        DebugTheme.ACCENT.getGreen(),
-                        DebugTheme.ACCENT.getBlue(),
-                        190
+        JPanel row =
+                new JPanel(
+                        new FlowLayout(
+                                FlowLayout.LEFT,
+                                3,
+                                0
+                        )
                 );
 
-        g2.setColor(
-                scanColor
+        row.setOpaque(false);
+
+        JLabel label =
+                new JLabel(text);
+
+        label.setForeground(
+                DebugTheme.TEXT_MUTED
         );
 
-        g2.fillRoundRect(
-                scanX,
-                getHeight() - 6,
-                90,
-                3,
-                8,
-                8
+        label.setFont(
+                DebugTheme.SMALL
         );
 
-        g2.dispose();
+        row.add(indicator);
+
+        row.add(label);
+
+        return row;
     }
 
     public void setMainStatus(
             String text
     ) {
 
-        mainStatus.setText(
-                text
-        );
+        if (
+                text == null
+        ) {
+
+            return;
+        }
+
+        String lower =
+                text.toLowerCase();
 
         if (
-                text.contains(
-                        "THINKING"
+                lower.contains(
+                        "pensando"
                 )
-                || text.contains(
-                        "LISTENING"
-                )
-                || text.contains(
-                        "TRANSCRIBING"
+                || lower.contains(
+                        "thinking"
                 )
         ) {
+
+            mainStatus.setText(
+                    "Pensando"
+            );
 
             mainStatus.setForeground(
                     DebugTheme.ACCENT
             );
 
-        } else if (
-                text.contains(
-                        "OFFLINE"
+            orb.setState(
+                    AIOrbPanel.State.THINKING
+            );
+
+            return;
+        }
+
+        if (
+                lower.contains(
+                        "escuchando"
+                )
+                || lower.contains(
+                        "listening"
                 )
         ) {
+
+            mainStatus.setText(
+                    "Escuchando"
+            );
+
+            mainStatus.setForeground(
+                    DebugTheme.ACCENT_BRIGHT
+            );
+
+            orb.setState(
+                    AIOrbPanel.State.LISTENING
+            );
+
+            return;
+        }
+
+        if (
+                lower.contains(
+                        "transcrib"
+                )
+        ) {
+
+            mainStatus.setText(
+                    "Transcribiendo"
+            );
+
+            mainStatus.setForeground(
+                    DebugTheme.VIOLET
+            );
+
+            orb.setState(
+                    AIOrbPanel.State.TRANSCRIBING
+            );
+
+            return;
+        }
+
+        if (
+                lower.contains(
+                        "error"
+                )
+                || lower.contains(
+                        "offline"
+                )
+                || lower.contains(
+                        "no disponible"
+                )
+        ) {
+
+            mainStatus.setText(text);
 
             mainStatus.setForeground(
                     DebugTheme.ERROR
             );
 
-        } else {
+            orb.setState(
+                    AIOrbPanel.State.ERROR
+            );
+
+            return;
+        }
+
+        if (
+                lower.contains(
+                        "listo"
+                )
+                || lower.contains(
+                        "ready"
+                )
+                || lower.contains(
+                        "conectado"
+                )
+        ) {
+
+            mainStatus.setText(
+                    text
+            );
 
             mainStatus.setForeground(
                     DebugTheme.SUCCESS
             );
+
+            orb.setState(
+                    AIOrbPanel.State.READY
+            );
+
+            return;
         }
+
+        mainStatus.setText(text);
+
+        mainStatus.setForeground(
+                DebugTheme.TEXT
+        );
     }
 
     public void setGeminiOnline(

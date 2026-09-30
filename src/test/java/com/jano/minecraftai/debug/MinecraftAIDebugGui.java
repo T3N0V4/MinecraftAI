@@ -2,6 +2,9 @@ package com.jano.minecraftai.debug;
 
 import com.jano.minecraftai.debug.ui.DebugHeaderPanel;
 import com.jano.minecraftai.debug.ui.DebugTheme;
+import com.jano.minecraftai.debug.ui.DebugBackdropPanel;
+import com.jano.minecraftai.debug.ui.DebugStartupOverlay;
+import com.jano.minecraftai.debug.ui.DebugVisuals;
 import com.jano.minecraftai.ai.AIRequest;
 import com.jano.minecraftai.ai.AIResponse;
 import com.jano.minecraftai.ai.ConversationMemory;
@@ -290,6 +293,10 @@ private final List<String> inputHistory =
                 true
         );
 
+        DebugStartupOverlay.show(
+                frame
+        );
+
         inputField.requestFocusInWindow();
     }
 
@@ -359,10 +366,10 @@ private final List<String> inputHistory =
     private JPanel createMainPanel() {
 
         JPanel root =
-                new JPanel(
+                new DebugBackdropPanel(
                         new BorderLayout(
-                                10,
-                                10
+                                12,
+                                12
                         )
                 );
 
@@ -411,6 +418,9 @@ private final List<String> inputHistory =
                 split,
                 BorderLayout.CENTER
         );
+
+        
+        DebugVisuals.apply(root);
 
         return root;
     }
