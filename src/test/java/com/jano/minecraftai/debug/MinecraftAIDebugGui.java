@@ -6,6 +6,7 @@ import com.jano.minecraftai.ai.ConversationMemory;
 import com.jano.minecraftai.ai.MinecraftAIPrompt;
 import com.jano.minecraftai.ai.providers.GeminiProvider;
 
+import com.jano.minecraftai.context.ItemContext;
 import com.jano.minecraftai.context.PlayerContext;
 import com.jano.minecraftai.context.TargetContext;
 
@@ -89,9 +90,11 @@ private final List<String> inputHistory =
     private JTextField hungerField;
     private JTextField xpField;
 
-    private AutoCompleteTextField targetIdField;
-    private JTextField targetNameField;
+    private JComboBox<String> targetIdBox;
+    private JComboBox<String> targetNameBox;
     private JComboBox<String> targetTypeBox;
+
+    private boolean syncingTarget = false;
 
     private JComboBox<String> structureIdBox;
     private JComboBox<String> structureNameBox;
@@ -109,6 +112,71 @@ private final List<String> inputHistory =
 
     private volatile boolean voiceRecording =
             false;
+
+    private final List<DebugPreset> presets =
+            DebugPresets.all();
+
+    private JComboBox<String> presetBox;
+
+    private JTextArea presetSummaryArea;
+
+    private JPanel advancedPanel;
+
+    private JButton advancedToggleButton;
+
+    // Mundo
+    private JComboBox<String> weatherBox;
+    private JComboBox<String> difficultyBox;
+    private JComboBox<String> directionBox;
+
+    private JSpinner timeSpinner;
+    private JSpinner lightSpinner;
+
+    // Estado
+    private JSpinner saturationSpinner;
+    private JSpinner airSpinner;
+
+    // Equipo
+    private JComboBox<String> mainHandBox;
+    private JComboBox<String> offHandBox;
+
+    private JComboBox<String> helmetBox;
+    private JComboBox<String> chestplateBox;
+    private JComboBox<String> leggingsBox;
+    private JComboBox<String> bootsBox;
+
+    // Inventario
+    private JComboBox<String> inventoryItemBox;
+    private JSpinner inventoryCountSpinner;
+
+    private final DefaultListModel<String> inventoryListModel =
+            new DefaultListModel<>();
+
+    private final List<DebugInventoryItem> inventoryItems =
+            new ArrayList<>();
+
+    // Efectos
+    private JComboBox<String> effectBox;
+    private JSpinner effectLevelSpinner;
+    private JSpinner effectSecondsSpinner;
+
+    private final DefaultListModel<String> effectListModel =
+            new DefaultListModel<>();
+
+    private final List<DebugEffect> debugEffects =
+            new ArrayList<>();
+
+    // Entidades visibles
+    private JComboBox<String> visibleEntityBox;
+    private JSpinner visibleDistanceSpinner;
+    private JSpinner visibleHealthSpinner;
+    private JCheckBox visibleHostileCheck;
+
+    private final DefaultListModel<String> visibleEntityListModel =
+            new DefaultListModel<>();
+
+    private final List<DebugVisibleEntity> visibleEntities =
+            new ArrayList<>();
 
     public static void main(
             String[] args
@@ -289,7 +357,7 @@ private final List<String> inputHistory =
         JSplitPane split =
                 new JSplitPane(
                         JSplitPane.HORIZONTAL_SPLIT,
-                        createContextPanel(),
+                        createContextScrollPane(),
                         createWorkPanel()
                 );
 
@@ -402,6 +470,29 @@ private final List<String> inputHistory =
         return panel;
     }
 
+    private JScrollPane createContextScrollPane() {
+
+        JScrollPane scrollPane =
+                new JScrollPane(
+                        createContextPanel()
+                );
+
+        scrollPane.setBorder(
+                null
+        );
+
+        scrollPane.setHorizontalScrollBarPolicy(
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        );
+
+        scrollPane.getVerticalScrollBar()
+                .setUnitIncrement(
+                        16
+                );
+
+        return scrollPane;
+    }
+
     private JPanel createContextPanel() {
 
         JPanel root =
@@ -428,7 +519,7 @@ private final List<String> inputHistory =
         );
 
         root.add(
-                createGeneralContextPanel()
+                createPresetPanel()
         );
 
         root.add(
@@ -437,12 +528,105 @@ private final List<String> inputHistory =
                 )
         );
 
-        root.add(
-                createTargetPanel()
+        advancedToggleButton =
+                button(
+                        "Editar manualmente"
+                );
+
+        advancedToggleButton.addActionListener(
+                e -> toggleAdvancedMode()
         );
 
         root.add(
-                Box.createVerticalGlue()
+                advancedToggleButton
+        );
+
+        root.add(
+                Box.createVerticalStrut(
+                        10
+                )
+        );
+
+        advancedPanel =
+                new JPanel();
+
+        advancedPanel.setLayout(
+                new BoxLayout(
+                        advancedPanel,
+                        BoxLayout.Y_AXIS
+                )
+        );
+
+        advancedPanel.setBackground(
+                PANEL
+        );
+
+        advancedPanel.add(
+                createGeneralContextPanel()
+        );
+
+        advancedPanel.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        advancedPanel.add(
+                createTargetPanel()
+        );
+
+        advancedPanel.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        advancedPanel.add(
+                createEquipmentPanel()
+        );
+
+        advancedPanel.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        advancedPanel.add(
+                createInventoryPanel()
+        );
+
+        advancedPanel.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        advancedPanel.add(
+                createEffectsPanel()
+        );
+
+        advancedPanel.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        advancedPanel.add(
+                createVisibleEntitiesPanel()
+        );
+
+        advancedPanel.setVisible(
+                false
+        );
+
+        root.add(
+                advancedPanel
+        );
+
+        root.add(
+                Box.createVerticalStrut(
+                        12
+                )
         );
 
         JPanel buttons =
@@ -489,14 +673,163 @@ private final List<String> inputHistory =
                 buttons
         );
 
+        if (
+                !presets.isEmpty()
+        ) {
+
+            applyPreset(
+                    presets.get(
+                            0
+                    )
+            );
+        }
+
         return root;
+    }
+
+    private JPanel createPresetPanel() {
+
+        JPanel panel =
+                section(
+                        "Escenario"
+                );
+
+        panel.setLayout(
+                new BorderLayout(
+                        8,
+                        8
+                )
+        );
+
+        presetBox =
+                new JComboBox<>(
+                        presets.stream()
+                                .map(
+                                        preset -> preset.name
+                                )
+                                .toArray(
+                                        String[]::new
+                                )
+                );
+
+        styleCombo(
+                presetBox
+        );
+
+        presetBox.addActionListener(
+                e -> {
+
+                    DebugPreset preset =
+                            findPreset(
+                                    String.valueOf(
+                                            presetBox
+                                                    .getSelectedItem()
+                                    )
+                            );
+
+                    if (
+                            preset != null
+                    ) {
+
+                        applyPreset(
+                                preset
+                        );
+                    }
+                }
+        );
+
+        presetSummaryArea =
+                textArea();
+
+        presetSummaryArea.setEditable(
+                false
+        );
+
+        presetSummaryArea.setRows(
+                14
+        );
+
+        presetSummaryArea.setLineWrap(
+                true
+        );
+
+        presetSummaryArea.setWrapStyleWord(
+                true
+        );
+
+        panel.add(
+                presetBox,
+                BorderLayout.NORTH
+        );
+
+        panel.add(
+                scroll(
+                        presetSummaryArea
+                ),
+                BorderLayout.CENTER
+        );
+
+        return panel;
     }
 
     private JPanel createGeneralContextPanel() {
 
+        JPanel root =
+                new JPanel();
+
+        root.setLayout(
+                new BoxLayout(
+                        root,
+                        BoxLayout.Y_AXIS
+                )
+        );
+
+        root.setBackground(
+                PANEL
+        );
+
+        root.add(
+                createPlayerInfoPanel()
+        );
+
+        root.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        root.add(
+                createEnvironmentPanel()
+        );
+
+        root.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        root.add(
+                createWorldPanel()
+        );
+
+        root.add(
+                Box.createVerticalStrut(
+                        8
+                )
+        );
+
+        root.add(
+                createPlayerStatePanel()
+        );
+
+        return root;
+    }
+
+    private JPanel createPlayerInfoPanel() {
+
         JPanel panel =
                 section(
-                        "Contexto"
+                        "Información del jugador"
                 );
 
         panel.setLayout(
@@ -510,6 +843,78 @@ private final List<String> inputHistory =
 
         playerField =
                 field();
+
+        gamemodeBox =
+                new JComboBox<>(
+                        DebugCatalog.GAMEMODES
+                                .stream()
+                                .sorted()
+                                .toArray(
+                                        String[]::new
+                                )
+                );
+
+        styleCombo(
+                gamemodeBox
+        );
+
+        healthField =
+                field();
+
+        hungerField =
+                field();
+
+        xpField =
+                field();
+
+        addField(
+                panel,
+                "Jugador",
+                playerField
+        );
+
+        addField(
+                panel,
+                "Gamemode",
+                gamemodeBox
+        );
+
+        addField(
+                panel,
+                "Vida",
+                healthField
+        );
+
+        addField(
+                panel,
+                "Hambre",
+                hungerField
+        );
+
+        addField(
+                panel,
+                "XP",
+                xpField
+        );
+
+        return panel;
+    }
+
+    private JPanel createEnvironmentPanel() {
+
+        JPanel panel =
+                section(
+                        "Entorno"
+                );
+
+        panel.setLayout(
+                new GridLayout(
+                        0,
+                        2,
+                        6,
+                        6
+                )
+        );
 
         biomeBox =
                 new JComboBox<>(
@@ -538,29 +943,6 @@ private final List<String> inputHistory =
         styleCombo(
                 dimensionBox
         );
-
-        gamemodeBox =
-                new JComboBox<>(
-                        DebugCatalog.GAMEMODES
-                                .stream()
-                                .sorted()
-                                .toArray(
-                                        String[]::new
-                                )
-                );
-
-        styleCombo(
-                gamemodeBox
-        );
-
-        healthField =
-                field();
-
-        hungerField =
-                field();
-
-        xpField =
-                field();
 
         structureIdBox =
                 new JComboBox<>(
@@ -601,12 +983,6 @@ private final List<String> inputHistory =
 
         addField(
                 panel,
-                "Jugador",
-                playerField
-        );
-
-        addField(
-                panel,
                 "Bioma",
                 biomeBox
         );
@@ -619,30 +995,6 @@ private final List<String> inputHistory =
 
         addField(
                 panel,
-                "Gamemode",
-                gamemodeBox
-        );
-
-        addField(
-                panel,
-                "Vida",
-                healthField
-        );
-
-        addField(
-                panel,
-                "Hambre",
-                hungerField
-        );
-
-        addField(
-                panel,
-                "XP",
-                xpField
-        );
-
-        addField(
-                panel,
                 "Estructura ID",
                 structureIdBox
         );
@@ -651,6 +1003,133 @@ private final List<String> inputHistory =
                 panel,
                 "Nombre estructura",
                 structureNameBox
+        );
+
+        return panel;
+    }
+
+    private JPanel createWorldPanel() {
+
+        JPanel panel =
+                section(
+                        "Mundo"
+                );
+
+        panel.setLayout(
+                new GridLayout(
+                        0,
+                        2,
+                        6,
+                        6
+                )
+        );
+
+        weatherBox =
+                combo(
+                        DebugCatalog.WEATHER
+                );
+
+        difficultyBox =
+                combo(
+                        DebugCatalog.DIFFICULTIES
+                );
+
+        directionBox =
+                combo(
+                        DebugCatalog.DIRECTIONS
+                );
+
+        timeSpinner =
+                spinner(
+                        6000,
+                        0,
+                        23999,
+                        100
+                );
+
+        lightSpinner =
+                spinner(
+                        15,
+                        0,
+                        15,
+                        1
+                );
+
+        addField(
+                panel,
+                "Clima",
+                weatherBox
+        );
+
+        addField(
+                panel,
+                "Dificultad",
+                difficultyBox
+        );
+
+        addField(
+                panel,
+                "Hora Minecraft",
+                timeSpinner
+        );
+
+        addField(
+                panel,
+                "Luz",
+                lightSpinner
+        );
+
+        addField(
+                panel,
+                "Dirección",
+                directionBox
+        );
+
+        return panel;
+    }
+
+    private JPanel createPlayerStatePanel() {
+
+        JPanel panel =
+                section(
+                        "Estado"
+                );
+
+        panel.setLayout(
+                new GridLayout(
+                        0,
+                        2,
+                        6,
+                        6
+                )
+        );
+
+        saturationSpinner =
+                spinner(
+                        5,
+                        0,
+                        20,
+                        1
+                );
+
+        airSpinner =
+                spinner(
+                        300,
+                        0,
+                        300,
+                        20
+                );
+
+        addField(
+                panel,
+                "Saturación",
+                saturationSpinner
+        );
+
+        addField(
+                panel,
+                "Aire",
+                airSpinner
         );
 
         return panel;
@@ -685,37 +1164,41 @@ private final List<String> inputHistory =
                 targetTypeBox
         );
 
-        targetIdField =
-                new AutoCompleteTextField(
+        targetIdBox =
+                new JComboBox<>(
                         DebugCatalog.TARGETS
+                                .stream()
+                                .sorted()
+                                .toArray(
+                                        String[]::new
+                                )
                 );
 
-        styleField(
-                targetIdField
+        styleCombo(
+                targetIdBox
         );
 
-        targetNameField =
-                field();
+        targetNameBox =
+                new JComboBox<>(
+                        DebugCatalog.DISPLAY_NAMES
+                                .values()
+                                .stream()
+                                .sorted()
+                                .toArray(
+                                        String[]::new
+                                )
+                );
 
-        targetIdField.addActionListener(
-                e -> {
+        styleCombo(
+                targetNameBox
+        );
 
-                    String name =
-                            DebugCatalog.DISPLAY_NAMES.get(
-                                    targetIdField
-                                            .getText()
-                                            .trim()
-                            );
+        targetIdBox.addActionListener(
+                e -> syncTargetFromId()
+        );
 
-                    if (
-                            name != null
-                    ) {
-
-                        targetNameField.setText(
-                                name
-                        );
-                    }
-                }
+        targetNameBox.addActionListener(
+                e -> syncTargetFromName()
         );
 
         panel.add(
@@ -731,13 +1214,611 @@ private final List<String> inputHistory =
         addField(
                 panel,
                 "ID",
-                targetIdField
+                targetIdBox
         );
 
         addField(
                 panel,
                 "Nombre",
-                targetNameField
+                targetNameBox
+        );
+
+        return panel;
+    }
+
+    private JPanel createEquipmentPanel() {
+
+        JPanel panel =
+                section(
+                        "Equipo"
+                );
+
+        panel.setLayout(
+                new GridLayout(
+                        0,
+                        2,
+                        6,
+                        6
+                )
+        );
+
+        mainHandBox =
+                combo(
+                        DebugCatalog.ITEMS
+                );
+
+        offHandBox =
+                combo(
+                        DebugCatalog.ITEMS
+                );
+
+        helmetBox =
+                combo(
+                        DebugCatalog.ARMOR
+                );
+
+        chestplateBox =
+                combo(
+                        DebugCatalog.ARMOR
+                );
+
+        leggingsBox =
+                combo(
+                        DebugCatalog.ARMOR
+                );
+
+        bootsBox =
+                combo(
+                        DebugCatalog.ARMOR
+                );
+
+        addField(
+                panel,
+                "Mano principal",
+                mainHandBox
+        );
+
+        addField(
+                panel,
+                "Mano secundaria",
+                offHandBox
+        );
+
+        addField(
+                panel,
+                "Casco",
+                helmetBox
+        );
+
+        addField(
+                panel,
+                "Pechera",
+                chestplateBox
+        );
+
+        addField(
+                panel,
+                "Pantalones",
+                leggingsBox
+        );
+
+        addField(
+                panel,
+                "Botas",
+                bootsBox
+        );
+
+        return panel;
+    }
+
+    private JPanel createInventoryPanel() {
+
+        JPanel panel =
+                section(
+                        "Inventario"
+                );
+
+        panel.setLayout(
+                new BorderLayout(
+                        6,
+                        6
+                )
+        );
+
+        JPanel controls =
+                new JPanel(
+                        new GridLayout(
+                                0,
+                                2,
+                                6,
+                                6
+                        )
+                );
+
+        controls.setBackground(
+                PANEL_2
+        );
+
+        inventoryItemBox =
+                combo(
+                        DebugCatalog.ITEMS
+                );
+
+        inventoryCountSpinner =
+                spinner(
+                        1,
+                        1,
+                        64,
+                        1
+                );
+
+        addField(
+                controls,
+                "Item",
+                inventoryItemBox
+        );
+
+        addField(
+                controls,
+                "Cantidad",
+                inventoryCountSpinner
+        );
+
+        JButton add =
+                button(
+                        "Agregar"
+                );
+
+        add.addActionListener(
+                e -> addInventoryItem()
+        );
+
+        JButton remove =
+                button(
+                        "Quitar"
+                );
+
+        JList<String> list =
+                new JList<>(
+                        inventoryListModel
+                );
+
+        styleList(
+                list
+        );
+
+        remove.addActionListener(
+                e -> {
+
+                    int index =
+                            list.getSelectedIndex();
+
+                    if (
+                            index >= 0
+                    ) {
+
+                        inventoryItems.remove(
+                                index
+                        );
+
+                        refreshInventory();
+                    }
+                }
+        );
+
+        JPanel buttons =
+                new JPanel(
+                        new GridLayout(
+                                1,
+                                2,
+                                6,
+                                0
+                        )
+                );
+
+        buttons.setBackground(
+                PANEL_2
+        );
+
+        buttons.add(
+                add
+        );
+
+        buttons.add(
+                remove
+        );
+
+        JPanel top =
+                new JPanel(
+                        new BorderLayout(
+                                6,
+                                6
+                        )
+                );
+
+        top.setBackground(
+                PANEL_2
+        );
+
+        top.add(
+                controls,
+                BorderLayout.CENTER
+        );
+
+        top.add(
+                buttons,
+                BorderLayout.SOUTH
+        );
+
+        panel.add(
+                top,
+                BorderLayout.NORTH
+        );
+
+        panel.add(
+                scroll(
+                        list
+                ),
+                BorderLayout.CENTER
+        );
+
+        return panel;
+    }
+
+    private JPanel createEffectsPanel() {
+
+        JPanel panel =
+                section(
+                        "Efectos"
+                );
+
+        panel.setLayout(
+                new BorderLayout(
+                        6,
+                        6
+                )
+        );
+
+        JPanel controls =
+                new JPanel(
+                        new GridLayout(
+                                0,
+                                2,
+                                6,
+                                6
+                        )
+                );
+
+        controls.setBackground(
+                PANEL_2
+        );
+
+        effectBox =
+                combo(
+                        DebugCatalog.EFFECTS
+                );
+
+        effectLevelSpinner =
+                spinner(
+                        1,
+                        1,
+                        10,
+                        1
+                );
+
+        effectSecondsSpinner =
+                spinner(
+                        60,
+                        1,
+                        3600,
+                        10
+                );
+
+        addField(
+                controls,
+                "Efecto",
+                effectBox
+        );
+
+        addField(
+                controls,
+                "Nivel",
+                effectLevelSpinner
+        );
+
+        addField(
+                controls,
+                "Segundos",
+                effectSecondsSpinner
+        );
+
+        JButton add =
+                button(
+                        "Agregar"
+                );
+
+        JList<String> list =
+                new JList<>(
+                        effectListModel
+                );
+
+        styleList(
+                list
+        );
+
+        add.addActionListener(
+                e -> addEffect()
+        );
+
+        JButton remove =
+                button(
+                        "Quitar"
+                );
+
+        remove.addActionListener(
+                e -> {
+
+                    int index =
+                            list.getSelectedIndex();
+
+                    if (
+                            index >= 0
+                    ) {
+
+                        debugEffects.remove(
+                                index
+                        );
+
+                        refreshEffects();
+                    }
+                }
+        );
+
+        JPanel buttons =
+                new JPanel(
+                        new GridLayout(
+                                1,
+                                2,
+                                6,
+                                0
+                        )
+                );
+
+        buttons.setBackground(
+                PANEL_2
+        );
+
+        buttons.add(
+                add
+        );
+
+        buttons.add(
+                remove
+        );
+
+        JPanel top =
+                new JPanel(
+                        new BorderLayout(
+                                6,
+                                6
+                        )
+                );
+
+        top.setBackground(
+                PANEL_2
+        );
+
+        top.add(
+                controls,
+                BorderLayout.CENTER
+        );
+
+        top.add(
+                buttons,
+                BorderLayout.SOUTH
+        );
+
+        panel.add(
+                top,
+                BorderLayout.NORTH
+        );
+
+        panel.add(
+                scroll(
+                        list
+                ),
+                BorderLayout.CENTER
+        );
+
+        return panel;
+    }
+
+    private JPanel createVisibleEntitiesPanel() {
+
+        JPanel panel =
+                section(
+                        "Entidades visibles"
+                );
+
+        panel.setLayout(
+                new BorderLayout(
+                        6,
+                        6
+                )
+        );
+
+        JPanel controls =
+                new JPanel(
+                        new GridLayout(
+                                0,
+                                2,
+                                6,
+                                6
+                        )
+                );
+
+        controls.setBackground(
+                PANEL_2
+        );
+
+        visibleEntityBox =
+                combo(
+                        DebugCatalog.ENTITIES
+                );
+
+        visibleDistanceSpinner =
+                spinner(
+                        5,
+                        1,
+                        24,
+                        1
+                );
+
+        visibleHealthSpinner =
+                spinner(
+                        20,
+                        0,
+                        500,
+                        1
+                );
+
+        visibleHostileCheck =
+                new JCheckBox(
+                        "Hostil"
+                );
+
+        visibleHostileCheck.setBackground(
+                PANEL_2
+        );
+
+        visibleHostileCheck.setForeground(
+                TEXT
+        );
+
+        addField(
+                controls,
+                "Entidad",
+                visibleEntityBox
+        );
+
+        addField(
+                controls,
+                "Distancia",
+                visibleDistanceSpinner
+        );
+
+        addField(
+                controls,
+                "Vida",
+                visibleHealthSpinner
+        );
+
+        controls.add(
+                label(
+                        "Comportamiento"
+                )
+        );
+
+        controls.add(
+                visibleHostileCheck
+        );
+
+        JButton add =
+                button(
+                        "Agregar"
+                );
+
+        JList<String> list =
+                new JList<>(
+                        visibleEntityListModel
+                );
+
+        styleList(
+                list
+        );
+
+        add.addActionListener(
+                e -> addVisibleEntity()
+        );
+
+        JButton remove =
+                button(
+                        "Quitar"
+                );
+
+        remove.addActionListener(
+                e -> {
+
+                    int index =
+                            list.getSelectedIndex();
+
+                    if (
+                            index >= 0
+                    ) {
+
+                        visibleEntities.remove(
+                                index
+                        );
+
+                        refreshVisibleEntities();
+                    }
+                }
+        );
+
+        JPanel buttons =
+                new JPanel(
+                        new GridLayout(
+                                1,
+                                2,
+                                6,
+                                0
+                        )
+                );
+
+        buttons.setBackground(
+                PANEL_2
+        );
+
+        buttons.add(
+                add
+        );
+
+        buttons.add(
+                remove
+        );
+
+        JPanel top =
+                new JPanel(
+                        new BorderLayout(
+                                6,
+                                6
+                        )
+                );
+
+        top.setBackground(
+                PANEL_2
+        );
+
+        top.add(
+                controls,
+                BorderLayout.CENTER
+        );
+
+        top.add(
+                buttons,
+                BorderLayout.SOUTH
+        );
+
+        panel.add(
+                top,
+                BorderLayout.NORTH
+        );
+
+        panel.add(
+                scroll(
+                        list
+                ),
+                BorderLayout.CENTER
         );
 
         return panel;
@@ -1298,21 +2379,17 @@ private final List<String> inputHistory =
     ) {
 
         String structureId =
-                String.valueOf(
+                selected(
                         structureIdBox
-                                .getSelectedItem()
                 );
 
         String structureName =
-                String.valueOf(
+                selected(
                         structureNameBox
-                                .getSelectedItem()
                 );
 
         if (
-                structureId != null
-                && !structureId.isBlank()
-                && !"none".equals(
+                !"none".equals(
                         structureId
                 )
         ) {
@@ -1334,68 +2411,82 @@ private final List<String> inputHistory =
                 context.target;
 
         if (
-                target == null
-                || "none".equals(
+                target != null
+                && !"none".equals(
                         target.type
                 )
-                || target.id == null
-                || target.id.isBlank()
+                && target.id != null
         ) {
 
-            return;
-        }
-
-        String origin =
-                DebugCatalog.getModOrigin(
-                        target.id
-                );
-
-        request.addToolResult(
-                "get_mod_origin",
-                "ID: "
-                        + target.id
-                        + "\nOrigen: "
-                        + origin
-        );
-
-        if (
-                "block".equals(
-                        target.type
-                )
-        ) {
+            String origin =
+                    DebugCatalog.getModOrigin(
+                            target.id
+                    );
 
             request.addToolResult(
-                    "get_target_block",
-                    "Nombre: "
-                            + target.name
-                            + "\nID: "
-                            + target.id
-            );
-
-            request.addToolResult(
-                    "get_block_info",
-                    "Nombre: "
-                            + target.name
-                            + "\nID: "
+                    "get_mod_origin",
+                    "ID: "
                             + target.id
                             + "\nOrigen: "
                             + origin
             );
 
-        } else if (
-                "entity".equals(
-                        target.type
-                )
-        ) {
+            if (
+                    "block".equals(
+                            target.type
+                    )
+            ) {
 
-            request.addToolResult(
-                    "get_target_entity",
-                    "Nombre: "
-                            + target.name
-                            + "\nID: "
-                            + target.id
-            );
+                request.addToolResult(
+                        "get_target_block",
+                        "Nombre: "
+                                + target.name
+                                + "\nID: "
+                                + target.id
+                );
+
+                request.addToolResult(
+                        "get_block_info",
+                        "Nombre: "
+                                + target.name
+                                + "\nID: "
+                                + target.id
+                                + "\nOrigen: "
+                                + origin
+                );
+
+            } else if (
+                    "entity".equals(
+                            target.type
+                    )
+            ) {
+
+                request.addToolResult(
+                        "get_target_entity",
+                        "Nombre: "
+                                + target.name
+                                + "\nID: "
+                                + target.id
+                );
+            }
         }
+
+        request.addToolResult(
+                "get_held_item",
+                buildHeldItemToolResult(
+                        context
+                )
+        );
+
+        request.addToolResult(
+                "get_inventory",
+                buildInventoryToolResult()
+        );
+
+        request.addToolResult(
+                "get_visible_entities",
+                buildVisibleEntitiesToolResult()
+        );
     }
 
     private void syncStructureFromId() {
@@ -1548,21 +2639,18 @@ private final List<String> inputHistory =
                 );
 
         context.biome =
-                String.valueOf(
+                selected(
                         biomeBox
-                                .getSelectedItem()
                 );
 
         context.dimension =
-                String.valueOf(
+                selected(
                         dimensionBox
-                                .getSelectedItem()
                 );
 
         context.gameMode =
-                String.valueOf(
+                selected(
                         gamemodeBox
-                                .getSelectedItem()
                 );
 
         context.health =
@@ -1581,7 +2669,9 @@ private final List<String> inputHistory =
                 );
 
         context.saturation =
-                5;
+                ((Number) saturationSpinner
+                        .getValue())
+                        .floatValue();
 
         context.xpLevel =
                 parseInt(
@@ -1590,25 +2680,88 @@ private final List<String> inputHistory =
                 );
 
         context.air =
-                300;
+                ((Number) airSpinner
+                        .getValue())
+                        .intValue();
 
         context.direction =
-                "north";
+                selected(
+                        directionBox
+                );
 
         context.onGround =
                 true;
 
         context.weather =
-                "clear";
+                selected(
+                        weatherBox
+                );
 
         context.difficulty =
-                "normal";
+                selected(
+                        difficultyBox
+                );
 
         context.lightLevel =
-                15;
+                ((Number) lightSpinner
+                        .getValue())
+                        .intValue();
 
         context.worldTime =
-                6000;
+                ((Number) timeSpinner
+                        .getValue())
+                        .longValue();
+
+        context.mainHand =
+                createItemContext(
+                        selected(
+                                mainHandBox
+                        ),
+                        1
+                );
+
+        context.offHand =
+                createItemContext(
+                        selected(
+                                offHandBox
+                        ),
+                        1
+                );
+
+        addArmor(
+                context,
+                helmetBox
+        );
+
+        addArmor(
+                context,
+                chestplateBox
+        );
+
+        addArmor(
+                context,
+                leggingsBox
+        );
+
+        addArmor(
+                context,
+                bootsBox
+        );
+
+        for (
+                DebugEffect effect :
+                debugEffects
+        ) {
+
+            context.effects.add(
+                    effect.id()
+                            + " nivel "
+                            + effect.level()
+                            + " ("
+                            + effect.seconds()
+                            + "s)"
+            );
+        }
 
         context.target =
                 buildTarget();
@@ -1634,22 +2787,16 @@ private final List<String> inputHistory =
         }
 
         String id =
-                targetIdField
-                        .getText()
-                        .trim();
+                String.valueOf(
+                        targetIdBox
+                                .getSelectedItem()
+                );
 
         String name =
-                targetNameField
-                        .getText()
-                        .trim();
-
-        if (
-                name.isBlank()
-        ) {
-
-            name =
-                    id;
-        }
+                String.valueOf(
+                        targetNameBox
+                                .getSelectedItem()
+                );
 
         return new TargetContext(
                 type,
@@ -1660,6 +2807,111 @@ private final List<String> inputHistory =
                 0,
                 3
         );
+    }
+
+    private void syncTargetFromId() {
+
+        if (
+                syncingTarget
+        ) {
+            return;
+        }
+
+        syncingTarget =
+                true;
+
+        try {
+
+            String id =
+                    String.valueOf(
+                            targetIdBox
+                                    .getSelectedItem()
+                    );
+
+            String name =
+                    DebugCatalog.DISPLAY_NAMES.get(
+                            id
+                    );
+
+            String type =
+                    DebugCatalog.TARGET_TYPES.get(
+                            id
+                    );
+
+            if (
+                    name != null
+            ) {
+                targetNameBox.setSelectedItem(
+                        name
+                );
+            }
+
+            if (
+                    type != null
+            ) {
+                targetTypeBox.setSelectedItem(
+                        type
+                );
+            }
+
+        } finally {
+
+            syncingTarget =
+                    false;
+        }
+    }
+
+    private void syncTargetFromName() {
+
+        if (
+                syncingTarget
+        ) {
+            return;
+        }
+
+        syncingTarget =
+                true;
+
+        try {
+
+            String selectedName =
+                    String.valueOf(
+                            targetNameBox
+                                    .getSelectedItem()
+                    );
+
+            for (
+                    String id :
+                    DebugCatalog.TARGETS
+            ) {
+
+                if (
+                        selectedName.equals(
+                                DebugCatalog.DISPLAY_NAMES.get(
+                                        id
+                                )
+                        )
+                ) {
+
+                    targetIdBox.setSelectedItem(
+                            id
+                    );
+
+                    targetTypeBox.setSelectedItem(
+                            DebugCatalog.TARGET_TYPES.get(
+                                    id
+                            )
+                    );
+
+                    return;
+                }
+            }
+
+        } finally {
+
+            syncingTarget =
+                    false;
+        }
     }
 
     private void handleCommand(
@@ -1740,17 +2992,13 @@ private final List<String> inputHistory =
                     "block"
             );
 
-            targetIdField.setText(
+            targetIdBox.setSelectedItem(
                     command.substring(
                             8
                     ).trim()
             );
 
-            targetNameField.setText(
-                    command.substring(
-                            8
-                    ).trim()
-            );
+            syncTargetFromId();
 
             return;
         }
@@ -1873,54 +3121,918 @@ private final List<String> inputHistory =
         );
     }
 
-    private void resetContext() {
+    private DebugPreset findPreset(
+            String name
+    ) {
+
+        for (
+                DebugPreset preset :
+                presets
+        ) {
+
+            if (
+                    preset.name.equals(
+                            name
+                    )
+            ) {
+
+                return preset;
+            }
+        }
+
+        return null;
+    }
+
+    private void applyPreset(
+            DebugPreset preset
+    ) {
+
+        if (
+                preset == null
+        ) {
+            return;
+        }
 
         playerField.setText(
-                "Jano"
-        );
-
-        biomeBox.setSelectedItem(
-                "minecraft:plains"
-        );
-
-        dimensionBox.setSelectedItem(
-                "minecraft:overworld"
+                preset.playerName
         );
 
         gamemodeBox.setSelectedItem(
-                "survival"
+                preset.gameMode
         );
 
         healthField.setText(
-                "20"
+                String.valueOf(
+                        preset.health
+                )
         );
 
         hungerField.setText(
-                "20"
+                String.valueOf(
+                        preset.hunger
+                )
         );
 
         xpField.setText(
-                "0"
+                String.valueOf(
+                        preset.xp
+                )
+        );
+
+        biomeBox.setSelectedItem(
+                preset.biome
+        );
+
+        dimensionBox.setSelectedItem(
+                preset.dimension
         );
 
         structureIdBox.setSelectedItem(
-                "none"
+                preset.structureId
         );
 
-        structureNameBox.setSelectedItem(
-                "Ninguna"
+        syncStructureFromId();
+
+        targetIdBox.setSelectedItem(
+                preset.targetId
         );
 
-        targetTypeBox.setSelectedItem(
-                "none"
+        syncTargetFromId();
+
+        weatherBox.setSelectedItem(
+                preset.weather
         );
 
-        targetIdField.setText(
-                ""
+        difficultyBox.setSelectedItem(
+                preset.difficulty
         );
 
-        targetNameField.setText(
-                ""
+        directionBox.setSelectedItem(
+                preset.direction
+        );
+
+        timeSpinner.setValue(
+                preset.worldTime
+        );
+
+        lightSpinner.setValue(
+                preset.light
+        );
+
+        saturationSpinner.setValue(
+                preset.saturation
+        );
+
+        airSpinner.setValue(
+                preset.air
+        );
+
+        mainHandBox.setSelectedItem(
+                preset.mainHand
+        );
+
+        offHandBox.setSelectedItem(
+                preset.offHand
+        );
+
+        helmetBox.setSelectedItem(
+                preset.helmet
+        );
+
+        chestplateBox.setSelectedItem(
+                preset.chestplate
+        );
+
+        leggingsBox.setSelectedItem(
+                preset.leggings
+        );
+
+        bootsBox.setSelectedItem(
+                preset.boots
+        );
+
+        inventoryItems.clear();
+
+        for (
+                DebugPreset.InventoryEntry entry :
+                preset.inventory
+        ) {
+
+            inventoryItems.add(
+                    new DebugInventoryItem(
+                            entry.id(),
+                            DebugCatalog.ITEM_NAMES
+                                    .getOrDefault(
+                                            entry.id(),
+                                            entry.id()
+                                    ),
+                            entry.count()
+                    )
+            );
+        }
+
+        debugEffects.clear();
+
+        for (
+                DebugPreset.EffectEntry entry :
+                preset.effects
+        ) {
+
+            debugEffects.add(
+                    new DebugEffect(
+                            entry.id(),
+                            entry.level(),
+                            entry.seconds()
+                    )
+            );
+        }
+
+        visibleEntities.clear();
+
+        for (
+                DebugPreset.VisibleEntityEntry entry :
+                preset.visibleEntities
+        ) {
+
+            visibleEntities.add(
+                    new DebugVisibleEntity(
+                            entry.id(),
+                            DebugCatalog.ENTITY_NAMES
+                                    .getOrDefault(
+                                            entry.id(),
+                                            entry.id()
+                                    ),
+                            entry.distance(),
+                            entry.hostile(),
+                            entry.health()
+                    )
+            );
+        }
+
+        refreshInventory();
+        refreshEffects();
+        refreshVisibleEntities();
+
+        refreshPresetSummary(
+                preset
+        );
+    }
+
+    private void refreshPresetSummary(
+            DebugPreset preset
+    ) {
+
+        String structureName =
+                DebugCatalog.STRUCTURE_NAMES
+                        .getOrDefault(
+                                preset.structureId,
+                                preset.structureId
+                        );
+
+        String targetName =
+                DebugCatalog.DISPLAY_NAMES
+                        .getOrDefault(
+                                preset.targetId,
+                                preset.targetId
+                        );
+
+        String mainHandName =
+                DebugCatalog.ITEM_NAMES
+                        .getOrDefault(
+                                preset.mainHand,
+                                "Vacío"
+                        );
+
+        String offHandName =
+                DebugCatalog.ITEM_NAMES
+                        .getOrDefault(
+                                preset.offHand,
+                                "Vacío"
+                        );
+
+        StringBuilder text =
+                new StringBuilder();
+
+        text.append(
+                preset.description
+        );
+
+        text.append(
+                "\n\nJUGADOR\n"
+        );
+
+        text.append(
+                preset.playerName
+                        + " · "
+                        + preset.gameMode
+                        + " · "
+                        + preset.health
+                        + "/20 vida"
+        );
+
+        text.append(
+                "\n\nENTORNO\n"
+        );
+
+        text.append(
+                preset.biome
+                        + "\n"
+                        + preset.dimension
+        );
+
+        if (
+                !"none".equals(
+                        preset.structureId
+                )
+        ) {
+
+            text.append(
+                    "\n"
+                            + structureName
+            );
+        }
+
+        text.append(
+                "\n\nTARGET\n"
+        );
+
+        text.append(
+                "none".equals(
+                        preset.targetId
+                )
+                        ? "Ninguno"
+                        : targetName
+                                + " ["
+                                + preset.targetId
+                                + "]"
+        );
+
+        text.append(
+                "\n\nEQUIPO\n"
+        );
+
+        text.append(
+                "Principal: "
+                        + mainHandName
+                        + "\nSecundaria: "
+                        + offHandName
+        );
+
+        text.append(
+                "\n\nINVENTARIO\n"
+        );
+
+        if (
+                preset.inventory.isEmpty()
+        ) {
+
+            text.append(
+                    "Vacío"
+            );
+
+        } else {
+
+            for (
+                    DebugPreset.InventoryEntry entry :
+                    preset.inventory
+            ) {
+
+                text.append(
+                        DebugCatalog.ITEM_NAMES
+                                .getOrDefault(
+                                        entry.id(),
+                                        entry.id()
+                                )
+                                + " x"
+                                + entry.count()
+                                + "\n"
+                );
+            }
+        }
+
+        text.append(
+                "\nENTIDADES VISIBLES\n"
+        );
+
+        if (
+                preset.visibleEntities.isEmpty()
+        ) {
+
+            text.append(
+                    "Ninguna"
+            );
+
+        } else {
+
+            for (
+                    DebugPreset.VisibleEntityEntry entity :
+                    preset.visibleEntities
+            ) {
+
+                text.append(
+                        DebugCatalog.ENTITY_NAMES
+                                .getOrDefault(
+                                        entity.id(),
+                                        entity.id()
+                                )
+                                + " a "
+                                + entity.distance()
+                                + " bloques"
+                                + (
+                                entity.hostile()
+                                        ? " · hostil"
+                                        : ""
+                        )
+                                + "\n"
+                );
+            }
+        }
+
+        text.append(
+                "\nEFECTOS\n"
+        );
+
+        if (
+                preset.effects.isEmpty()
+        ) {
+
+            text.append(
+                    "Ninguno"
+            );
+
+        } else {
+
+            for (
+                    DebugPreset.EffectEntry effect :
+                    preset.effects
+            ) {
+
+                text.append(
+                        effect.id()
+                                + " nivel "
+                                + effect.level()
+                                + "\n"
+                );
+            }
+        }
+
+        presetSummaryArea.setText(
+                text.toString()
+                        .trim()
+        );
+
+        presetSummaryArea.setCaretPosition(
+                0
+        );
+    }
+
+    private void toggleAdvancedMode() {
+
+        boolean show =
+                !advancedPanel.isVisible();
+
+        advancedPanel.setVisible(
+                show
+        );
+
+        advancedToggleButton.setText(
+                show
+                        ? "Ocultar edición manual"
+                        : "Editar manualmente"
+        );
+
+        advancedPanel.revalidate();
+        advancedPanel.repaint();
+
+        if (
+                frame != null
+        ) {
+
+            frame.revalidate();
+            frame.repaint();
+        }
+    }
+
+    private void addInventoryItem() {
+
+        String id =
+                selected(
+                        inventoryItemBox
+                );
+
+        if (
+                "none".equals(
+                        id
+                )
+        ) {
+            return;
+        }
+
+        int count =
+                ((Number) inventoryCountSpinner
+                        .getValue())
+                        .intValue();
+
+        inventoryItems.add(
+                new DebugInventoryItem(
+                        id,
+                        DebugCatalog.ITEM_NAMES.getOrDefault(
+                                id,
+                                id
+                        ),
+                        count
+                )
+        );
+
+        refreshInventory();
+    }
+
+    private void refreshInventory() {
+
+        inventoryListModel.clear();
+
+        for (
+                DebugInventoryItem item :
+                inventoryItems
+        ) {
+
+            inventoryListModel.addElement(
+                    item.name()
+                            + " x"
+                            + item.count()
+                            + "  ["
+                            + item.id()
+                            + "]"
+            );
+        }
+    }
+
+    private void addEffect() {
+
+        debugEffects.add(
+                new DebugEffect(
+                        selected(
+                                effectBox
+                        ),
+                        ((Number) effectLevelSpinner
+                                .getValue())
+                                .intValue(),
+                        ((Number) effectSecondsSpinner
+                                .getValue())
+                                .intValue()
+                )
+        );
+
+        refreshEffects();
+    }
+
+    private void refreshEffects() {
+
+        effectListModel.clear();
+
+        for (
+                DebugEffect effect :
+                debugEffects
+        ) {
+
+            effectListModel.addElement(
+                    effect.id()
+                            + " · nivel "
+                            + effect.level()
+                            + " · "
+                            + effect.seconds()
+                            + "s"
+            );
+        }
+    }
+
+    private void addVisibleEntity() {
+
+        String id =
+                selected(
+                        visibleEntityBox
+                );
+
+        visibleEntities.add(
+                new DebugVisibleEntity(
+                        id,
+                        DebugCatalog.ENTITY_NAMES.getOrDefault(
+                                id,
+                                id
+                        ),
+                        ((Number) visibleDistanceSpinner
+                                .getValue())
+                                .doubleValue(),
+                        visibleHostileCheck.isSelected(),
+                        ((Number) visibleHealthSpinner
+                                .getValue())
+                                .floatValue()
+                )
+        );
+
+        refreshVisibleEntities();
+    }
+
+    private void refreshVisibleEntities() {
+
+        visibleEntityListModel.clear();
+
+        for (
+                DebugVisibleEntity entity :
+                visibleEntities
+        ) {
+
+            visibleEntityListModel.addElement(
+                    entity.name()
+                            + " · "
+                            + entity.distance()
+                            + " bloques"
+                            + (
+                            entity.hostile()
+                                    ? " · hostil"
+                                    : ""
+                    )
+            );
+        }
+    }
+
+    private String buildInventoryToolResult() {
+
+        StringBuilder json =
+                new StringBuilder();
+
+        json.append(
+                "{\n  \"items\": [\n"
+        );
+
+        for (
+                int i = 0;
+                i < inventoryItems.size();
+                i++
+        ) {
+
+            DebugInventoryItem item =
+                    inventoryItems.get(
+                            i
+                    );
+
+            json.append(
+                    "    {\n"
+                            + "      \"slot\": "
+                            + i
+                            + ",\n"
+                            + "      \"id\": \""
+                            + item.id()
+                            + "\",\n"
+                            + "      \"name\": \""
+                            + item.name()
+                            + "\",\n"
+                            + "      \"mod_id\": \""
+                            + namespace(
+                                    item.id()
+                            )
+                            + "\",\n"
+                            + "      \"count\": "
+                            + item.count()
+                            + "\n"
+                            + "    }"
+            );
+
+            if (
+                    i < inventoryItems.size() - 1
+            ) {
+
+                json.append(
+                        ","
+                );
+            }
+
+            json.append(
+                    "\n"
+            );
+        }
+
+        json.append(
+                "  ]\n}"
+        );
+
+        return json.toString();
+    }
+
+    private String buildVisibleEntitiesToolResult() {
+
+        StringBuilder json =
+                new StringBuilder();
+
+        json.append(
+                "{\n  \"range\": 24,\n  \"entities\": [\n"
+        );
+
+        for (
+                int i = 0;
+                i < visibleEntities.size();
+                i++
+        ) {
+
+            DebugVisibleEntity entity =
+                    visibleEntities.get(
+                            i
+                    );
+
+            json.append(
+                    "    {\n"
+                            + "      \"id\": \""
+                            + entity.id()
+                            + "\",\n"
+                            + "      \"name\": \""
+                            + entity.name()
+                            + "\",\n"
+                            + "      \"mod_id\": \""
+                            + namespace(
+                                    entity.id()
+                            )
+                            + "\",\n"
+                            + "      \"distance\": "
+                            + entity.distance()
+                            + ",\n"
+                            + "      \"hostile\": "
+                            + entity.hostile()
+                            + ",\n"
+                            + "      \"health\": "
+                            + entity.health()
+                            + ",\n"
+                            + "      \"max_health\": 20.0\n"
+                            + "    }"
+            );
+
+            if (
+                    i < visibleEntities.size() - 1
+            ) {
+
+                json.append(
+                        ","
+                );
+            }
+
+            json.append(
+                    "\n"
+            );
+        }
+
+        json.append(
+                "  ]\n}"
+        );
+
+        return json.toString();
+    }
+
+    private String buildHeldItemToolResult(
+            PlayerContext context
+    ) {
+
+        return "Mano principal: "
+                + context.mainHand
+                + "\nMano secundaria: "
+                + context.offHand;
+    }
+
+    private ItemContext createItemContext(
+            String id,
+            int count
+    ) {
+
+        if (
+                id == null
+                || "none".equals(
+                        id
+                )
+        ) {
+
+            return new ItemContext(
+                    null,
+                    "Vacío",
+                    0,
+                    0,
+                    0
+            );
+        }
+
+        return new ItemContext(
+                id,
+                DebugCatalog.ITEM_NAMES
+                        .getOrDefault(
+                                id,
+                                DebugCatalog.ARMOR_NAMES
+                                        .getOrDefault(
+                                                id,
+                                                id
+                                        )
+                        ),
+                count,
+                0,
+                0
+        );
+    }
+
+    private void addArmor(
+            PlayerContext context,
+            JComboBox<String> box
+    ) {
+
+        String id =
+                selected(
+                        box
+                );
+
+        if (
+                !"none".equals(
+                        id
+                )
+        ) {
+
+            context.armor.add(
+                    createItemContext(
+                            id,
+                            1
+                    )
+            );
+        }
+    }
+
+    private String namespace(
+            String id
+    ) {
+
+        if (
+                id == null
+                || !id.contains(":")
+        ) {
+            return "unknown";
+        }
+
+        return id.substring(
+                0,
+                id.indexOf(':')
+        );
+    }
+
+    private JComboBox<String> combo(
+            List<String> values
+    ) {
+
+        JComboBox<String> combo =
+                new JComboBox<>(
+                        values.stream()
+                                .sorted()
+                                .toArray(
+                                        String[]::new
+                                )
+                );
+
+        styleCombo(
+                combo
+        );
+
+        return combo;
+    }
+
+    private JSpinner spinner(
+            int value,
+            int min,
+            int max,
+            int step
+    ) {
+
+        JSpinner spinner =
+                new JSpinner(
+                        new SpinnerNumberModel(
+                                value,
+                                min,
+                                max,
+                                step
+                        )
+                );
+
+        return spinner;
+    }
+
+    private String selected(
+            JComboBox<String> box
+    ) {
+
+        Object selected =
+                box.getSelectedItem();
+
+        return selected == null
+                ? ""
+                : selected.toString();
+    }
+
+    private void styleList(
+            JList<String> list
+    ) {
+
+        list.setBackground(
+                FIELD
+        );
+
+        list.setForeground(
+                TEXT
+        );
+
+        list.setSelectionBackground(
+                ACCENT.darker()
+        );
+
+        list.setVisibleRowCount(
+                4
+        );
+    }
+
+    private record DebugInventoryItem(
+            String id,
+            String name,
+            int count
+    ) {
+    }
+
+    private record DebugEffect(
+            String id,
+            int level,
+            int seconds
+    ) {
+    }
+
+    private record DebugVisibleEntity(
+            String id,
+            String name,
+            double distance,
+            boolean hostile,
+            float health
+    ) {
+    }
+
+    private void resetContext() {
+
+        if (
+                presets.isEmpty()
+        ) {
+            return;
+        }
+
+        if (
+                presetBox != null
+        ) {
+
+            presetBox.setSelectedIndex(
+                    0
+            );
+        }
+
+        applyPreset(
+                presets.get(
+                        0
+                )
         );
     }
 
