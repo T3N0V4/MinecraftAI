@@ -52,3 +52,5 @@ config/minecraft-ai.json
 __pycache__/
 *.pyc
 voice/*.wav
+bin/
+.venv-*/
