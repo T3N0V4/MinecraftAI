@@ -250,6 +250,8 @@ public final class MinecraftAIVoiceClient {
             MinecraftClient client
     ) {
 
+        MinecraftAITtsClient.stop();
+
         AIOverlayState.setThinking(
                 true
         );

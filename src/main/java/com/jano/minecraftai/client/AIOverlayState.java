@@ -17,12 +17,17 @@ public class AIOverlayState {
         public final Role role;
         public final String text;
 
+        public final long createdAtNanos;
+
         public Message(
                 Role role,
                 String text
         ) {
             this.role = role;
             this.text = text;
+
+            this.createdAtNanos =
+                    System.nanoTime();
         }
     }
 
