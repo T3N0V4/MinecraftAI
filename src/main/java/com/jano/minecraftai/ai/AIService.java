@@ -86,6 +86,67 @@ public class AIService {
         long totalStart =
                 System.currentTimeMillis();
 
+        /*
+         * FAST PATH
+         *
+         * Para preguntas muy claras no necesitamos gastar
+         * una llamada a Gemini preguntándole qué tool usar.
+         *
+         * Ejecutamos la tool primero y Gemini recibe
+         * directamente el resultado real.
+         */
+        String fastTool =
+                ToolFastPathRouter.resolve(
+                        request.question
+                );
+
+        if (
+                fastTool != null
+                && toolGateway.exists(
+                        fastTool
+                )
+        ) {
+
+            System.out.println(
+                    "[MinecraftAI] FAST PATH -> "
+                            + fastTool
+            );
+
+            long fastToolStart =
+                    System.currentTimeMillis();
+
+            ToolResult fastResult =
+                    toolGateway.execute(
+                            fastTool,
+                            player,
+                            Map.of()
+                    );
+
+            if (
+                    fastResult != null
+            ) {
+
+                request.addToolResult(
+                        fastTool,
+                        fastResult.content
+                );
+
+                usedToolCalls.add(
+                        fastTool
+                                + "::{}"
+                );
+            }
+
+            System.out.println(
+                    "[MinecraftAI] FAST PATH tool terminada en "
+                            + (
+                                    System.currentTimeMillis()
+                                            - fastToolStart
+                            )
+                            + " ms"
+            );
+        }
+
         for (
                 int iteration = 0;
                 iteration <= MAX_TOOL_CALLS;

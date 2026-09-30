@@ -6,7 +6,6 @@ import com.jano.minecraftai.ai.AIResponse;
 import com.jano.minecraftai.ai.AIService;
 import com.jano.minecraftai.ai.ConversationMemory;
 
-import com.jano.minecraftai.ai.providers.DebugProvider;
 import com.jano.minecraftai.ai.providers.GeminiProvider;
 
 import com.jano.minecraftai.context.PlayerContext;
@@ -63,9 +62,6 @@ public class AIServerNetworking {
                 new GeminiProvider()
         );
 
-        router.addProvider(
-                new DebugProvider()
-        );
 
         aiService =
                 new AIService(router);
@@ -100,6 +96,31 @@ public class AIServerNetworking {
 
                     int totalChunks =
                             buffer.readInt();
+
+                    /*
+                     * Si el cliente ya sabe que la pregunta
+                     * tiene una tool directa, no necesita
+                     * mandar screenshot.
+                     */
+                    if (
+                            totalBytes == 0
+                            && totalChunks == 0
+                    ) {
+
+                        System.out.println(
+                                "[MinecraftAI] Request sin imagen: "
+                                        + pregunta
+                        );
+
+                        procesarPregunta(
+                                server,
+                                player,
+                                pregunta,
+                                new byte[0]
+                        );
+
+                        return;
+                    }
 
                     if (
                             totalBytes <= 0

@@ -1,5 +1,6 @@
 package com.jano.minecraftai.client;
 
+import com.jano.minecraftai.ai.ToolFastPathRouter;
 import com.jano.minecraftai.network.NetworkConstants;
 import com.mojang.brigadier.arguments.StringArgumentType;
 
@@ -396,9 +397,47 @@ public class MinecraftAIClient
                                         false
                                 );
 
-                                AIOverlayState.setStatus(
-                                        "Listo"
-                                );
+                                if (
+                                        MinecraftAIClientConfig
+                                                .isVoiceEnabled()
+                                ) {
+
+                                    AIOverlayState.setStatus(
+                                            "Hablando..."
+                                    );
+
+                                    MinecraftAITtsClient
+                                            .speak(
+                                                    content
+                                            )
+                                            .thenAccept(
+                                                    success ->
+                                                            client.execute(
+                                                                    () -> {
+
+                                                                        if (
+                                                                                "Hablando..."
+                                                                                        .equals(
+                                                                                                AIOverlayState
+                                                                                                        .getStatus()
+                                                                                        )
+                                                                        ) {
+
+                                                                            AIOverlayState
+                                                                                    .setStatus(
+                                                                                            "Listo"
+                                                                                    );
+                                                                        }
+                                                                    }
+                                                            )
+                                            );
+
+                                } else {
+
+                                    AIOverlayState.setStatus(
+                                            "Listo"
+                                    );
+                                }
 
                                 System.out.println(
                                         "[MinecraftAI] "
@@ -514,6 +553,32 @@ public class MinecraftAIClient
         AIOverlayState.setThinking(
                 true
         );
+
+        String fastTool =
+                ToolFastPathRouter.resolve(
+                        question
+                );
+
+        if (
+                fastTool != null
+        ) {
+
+            AIOverlayState.setStatus(
+                    "Consultando..."
+            );
+
+            System.out.println(
+                    "[MinecraftAI] Cliente FAST PATH -> "
+                            + fastTool
+                            + " | sin screenshot"
+            );
+
+            enviarPreguntaSinImagen(
+                    question
+            );
+
+            return;
+        }
 
         AIOverlayState.setStatus(
                 "Observando..."
@@ -635,6 +700,36 @@ public class MinecraftAIClient
         }
     }
 
+
+    private static void enviarPreguntaSinImagen(
+            String pregunta
+    ) {
+
+        PacketByteBuf buffer =
+                PacketByteBufs.create();
+
+        buffer.writeUuid(
+                UUID.randomUUID()
+        );
+
+        buffer.writeString(
+                pregunta,
+                2048
+        );
+
+        buffer.writeInt(
+                0
+        );
+
+        buffer.writeInt(
+                0
+        );
+
+        ClientPlayNetworking.send(
+                NetworkConstants.ASK_BEGIN,
+                buffer
+        );
+    }
 
     // ========================================================
     // CHUNKS
