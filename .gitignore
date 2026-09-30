@@ -54,3 +54,5 @@ __pycache__/
 voice/*.wav
 bin/
 .venv-*/
+
+voice/*.log
