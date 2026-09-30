@@ -141,8 +141,10 @@ public final class MinecraftAIVoiceClient {
         }
 
         int freeKey =
-                findFreeKey(
-                        client
+                MinecraftAIKeyUtil.findFreeKey(
+                        client,
+                        KEY_CANDIDATES,
+                        voiceKey
                 );
 
         if (
@@ -183,68 +185,7 @@ public final class MinecraftAIVoiceClient {
         );
     }
 
-    private static int findFreeKey(
-            MinecraftClient client
-    ) {
 
-        for (
-                int candidate :
-                KEY_CANDIDATES
-        ) {
-
-            if (
-                    !isKeyUsed(
-                            client,
-                            candidate
-                    )
-            ) {
-
-                return candidate;
-            }
-        }
-
-        return GLFW.GLFW_KEY_UNKNOWN;
-    }
-
-    private static boolean isKeyUsed(
-            MinecraftClient client,
-            int keyCode
-    ) {
-
-        InputUtil.Key candidate =
-                InputUtil.Type.KEYSYM
-                        .createFromCode(
-                                keyCode
-                        );
-
-        String candidateId =
-                candidate.getTranslationKey();
-
-        for (
-                KeyBinding binding :
-                client.options.allKeys
-        ) {
-
-            if (
-                    binding == voiceKey
-                    || binding.isUnbound()
-            ) {
-                continue;
-            }
-
-            if (
-                    candidateId.equals(
-                            binding
-                                    .getBoundKeyTranslationKey()
-                    )
-            ) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     private static void startRecording(
             MinecraftClient client
