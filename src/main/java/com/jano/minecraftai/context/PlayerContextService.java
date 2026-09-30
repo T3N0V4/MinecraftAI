@@ -229,14 +229,11 @@ public class PlayerContextService {
         int maxDurability =
                 stack.getMaxDamage();
 
-        int durability = 0;
-
-        if (maxDurability > 0) {
-
-            durability =
-                    maxDurability
-                    - stack.getDamage();
-        }
+        int durability =
+                maxDurability > 0
+                        ? maxDurability
+                        - stack.getDamage()
+                        : 0;
 
         return new ItemContext(
                 id,
