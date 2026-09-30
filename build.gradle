@@ -57,3 +57,21 @@ publishing {
 test {
     useJUnitPlatform()
 }
+tasks.register("aiDebug", JavaExec) {
+    group = "minecraftai"
+    description = "Abre la consola interactiva de debug de MinecraftAI."
+
+    classpath = sourceSets.test.runtimeClasspath
+
+    mainClass = "com.jano.minecraftai.debug.MinecraftAIDebugChat"
+
+    standardInput = System.in
+}
+tasks.register("aiDebugGui", JavaExec) {
+    group = "minecraftai"
+    description = "Abre la interfaz grafica de debug de MinecraftAI."
+
+    classpath = sourceSets.test.runtimeClasspath
+
+    mainClass = "com.jano.minecraftai.debug.MinecraftAIDebugGui"
+}

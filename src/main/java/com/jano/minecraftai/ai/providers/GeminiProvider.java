@@ -29,7 +29,23 @@ public class GeminiProvider
 
     private final HttpClient httpClient;
 
+    private final String apiKey;
+
     public GeminiProvider() {
+
+        this(
+                System.getenv(
+                        API_KEY_ENV
+                )
+        );
+    }
+
+    public GeminiProvider(
+            String apiKey
+    ) {
+
+        this.apiKey =
+                apiKey;
 
         this.httpClient =
                 HttpClient.newBuilder()
@@ -52,11 +68,6 @@ public class GeminiProvider
     @Override
     public boolean isAvailable() {
 
-        String apiKey =
-                System.getenv(
-                        API_KEY_ENV
-                );
-
         return apiKey != null
                 && !apiKey.isBlank();
     }
@@ -68,11 +79,6 @@ public class GeminiProvider
 
         long start =
                 System.currentTimeMillis();
-
-        String apiKey =
-                System.getenv(
-                        API_KEY_ENV
-                );
 
         if (
                 apiKey == null
