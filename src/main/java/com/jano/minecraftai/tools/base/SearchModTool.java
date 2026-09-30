@@ -155,29 +155,9 @@ public class SearchModTool
 
             ModContainer mod =
                     matches.get(i);
-
             json.append(
-                    """
-                        {
-                          "id": "%s",
-                          "name": "%s",
-                          "version": "%s"
-                        }
-                    """
-                    .formatted(
-                            KnowledgeToolUtil.escape(
-                                    mod.getMetadata()
-                                            .getId()
-                            ),
-                            KnowledgeToolUtil.escape(
-                                    mod.getMetadata()
-                                            .getName()
-                            ),
-                            KnowledgeToolUtil.escape(
-                                    mod.getMetadata()
-                                            .getVersion()
-                                            .getFriendlyString()
-                            )
+                    KnowledgeToolUtil.modToJson(
+                            mod
                     )
             );
 

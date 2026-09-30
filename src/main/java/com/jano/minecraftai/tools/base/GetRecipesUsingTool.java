@@ -1,5 +1,6 @@
 package com.jano.minecraftai.tools.base;
 
+import com.jano.minecraftai.tools.KnowledgeToolUtil;
 import com.jano.minecraftai.tools.MinecraftAITool;
 import com.jano.minecraftai.tools.ToolContext;
 import com.jano.minecraftai.tools.ToolResult;
@@ -186,12 +187,10 @@ public class GetRecipesUsingTool
                             outputId,
                             output.isEmpty()
                                     ? "unknown"
-                                    : output.getName()
-                                            .getString()
-                                            .replace(
-                                                    "\"",
-                                                    "\\\""
-                                            ),
+                                    : KnowledgeToolUtil.escape(
+                                            output.getName()
+                                                    .getString()
+                                    ),
                             output.isEmpty()
                                     ? 0
                                     : output.getCount()

@@ -4,6 +4,7 @@ import com.jano.minecraftai.context.PlayerContext;
 import com.jano.minecraftai.context.PlayerContextService;
 import com.jano.minecraftai.context.TargetContext;
 
+import com.jano.minecraftai.tools.KnowledgeToolUtil;
 import com.jano.minecraftai.tools.MinecraftAITool;
 import com.jano.minecraftai.tools.ToolContext;
 import com.jano.minecraftai.tools.ToolResult;
@@ -52,7 +53,9 @@ public class GetTargetBlockTool
         }
 
         String modId =
-                getNamespace(target.id);
+                KnowledgeToolUtil.namespace(
+                        target.id
+                );
 
         return ToolResult.success(
                 """
@@ -76,23 +79,6 @@ public class GetTargetBlockTool
                         target.distance,
                         target.properties
                 )
-        );
-    }
-
-    private String getNamespace(
-            String id
-    ) {
-
-        if (
-                id == null
-                || !id.contains(":")
-        ) {
-            return "unknown";
-        }
-
-        return id.substring(
-                0,
-                id.indexOf(':')
         );
     }
 }

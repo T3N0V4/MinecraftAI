@@ -11,6 +11,7 @@ import net.minecraft.server.world.ServerWorld;
 
 import net.minecraft.util.math.Vec3d;
 
+import com.jano.minecraftai.tools.KnowledgeToolUtil;
 import com.jano.minecraftai.tools.MinecraftAITool;
 import com.jano.minecraftai.tools.ToolContext;
 import com.jano.minecraftai.tools.ToolResult;
@@ -205,12 +206,9 @@ public class GetVisibleEntitiesTool
                     visible.get(i);
 
             String namespace =
-                    info.id.contains(":")
-                            ? info.id.substring(
-                                    0,
-                                    info.id.indexOf(':')
-                            )
-                            : "unknown";
+                    KnowledgeToolUtil.namespace(
+                            info.id
+                    );
 
             builder.append(
                     """
@@ -226,7 +224,9 @@ public class GetVisibleEntitiesTool
                     """
                     .formatted(
                             info.id,
-                            info.name,
+                            KnowledgeToolUtil.escape(
+                                    info.name
+                            ),
                             namespace,
                             info.distance,
                             info.hostile,

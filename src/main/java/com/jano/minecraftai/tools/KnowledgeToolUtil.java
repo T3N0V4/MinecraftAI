@@ -60,6 +60,34 @@ public class KnowledgeToolUtil {
                 .replace("\r", "\\r");
     }
 
+
+    public static String modToJson(
+            ModContainer mod
+    ) {
+
+        return """
+               {
+                 "id": "%s",
+                 "name": "%s",
+                 "version": "%s"
+               }
+               """
+                .formatted(
+                        escape(
+                                mod.getMetadata()
+                                        .getId()
+                        ),
+                        escape(
+                                mod.getMetadata()
+                                        .getName()
+                        ),
+                        escape(
+                                mod.getMetadata()
+                                        .getVersion()
+                                        .getFriendlyString()
+                        )
+                );
+    }
     private KnowledgeToolUtil() {
     }
 }

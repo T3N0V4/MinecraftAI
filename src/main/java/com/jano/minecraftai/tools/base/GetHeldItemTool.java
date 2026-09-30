@@ -3,6 +3,7 @@ package com.jano.minecraftai.tools.base;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 
+import com.jano.minecraftai.tools.KnowledgeToolUtil;
 import com.jano.minecraftai.tools.MinecraftAITool;
 import com.jano.minecraftai.tools.ToolContext;
 import com.jano.minecraftai.tools.ToolResult;
@@ -74,12 +75,9 @@ public class GetHeldItemTool
                         .toString();
 
         String namespace =
-                id.contains(":")
-                        ? id.substring(
-                                0,
-                                id.indexOf(':')
-                        )
-                        : "unknown";
+                KnowledgeToolUtil.namespace(
+                        id
+                );
 
         int maxDamage =
                 stack.getMaxDamage();

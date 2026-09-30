@@ -77,32 +77,9 @@ public class GetInstalledModsTool
 
             ModContainer mod =
                     mods.get(i);
-
-            String id =
-                    mod.getMetadata()
-                            .getId();
-
-            String name =
-                    mod.getMetadata()
-                            .getName();
-
-            String version =
-                    mod.getMetadata()
-                            .getVersion()
-                            .getFriendlyString();
-
             json.append(
-                    """
-                        {
-                          "id": "%s",
-                          "name": "%s",
-                          "version": "%s"
-                        }
-                    """
-                    .formatted(
-                            KnowledgeToolUtil.escape(id),
-                            KnowledgeToolUtil.escape(name),
-                            KnowledgeToolUtil.escape(version)
+                    KnowledgeToolUtil.modToJson(
+                            mod
                     )
             );
 
