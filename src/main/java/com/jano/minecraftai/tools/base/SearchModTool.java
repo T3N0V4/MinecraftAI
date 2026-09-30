@@ -12,6 +12,7 @@ import net.fabricmc.loader.api.ModContainer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 public class SearchModTool
@@ -34,6 +35,16 @@ public class SearchModTool
     @Override
     public ToolTier getTier() {
         return ToolTier.BASE;
+    }
+
+
+    @Override
+    public Map<String, String> getArguments() {
+
+        return Map.of(
+                "query",
+                "Nombre o id del mod que se desea buscar."
+        );
     }
 
     @Override

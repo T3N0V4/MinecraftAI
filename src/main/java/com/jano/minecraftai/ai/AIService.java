@@ -171,12 +171,42 @@ public class AIService {
                 return modelResponse;
             }
 
+            if (
+                    "NEED_VISION".equalsIgnoreCase(
+                            modelResponse.content.trim()
+                    )
+            ) {
+
+                System.out.println(
+                        "[MinecraftAI][Route] semantic -> VISION"
+                );
+
+                return new AIResponse(
+                        true,
+                        "vision",
+                        modelResponse.model,
+                        "NEED_VISION",
+                        System.currentTimeMillis()
+                                - totalStart
+                );
+            }
+
             ToolCall toolCall =
                     ToolCallParser.parse(
                             modelResponse.content
                     );
 
             if (toolCall == null) {
+
+                long totalElapsed =
+                        System.currentTimeMillis()
+                                - totalStart;
+
+                System.out.println(
+                        "[MinecraftAI] TOTAL request: "
+                                + totalElapsed
+                                + " ms"
+                );
 
                 return new AIResponse(
                         true,

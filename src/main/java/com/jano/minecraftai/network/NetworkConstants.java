@@ -28,6 +28,12 @@ public class NetworkConstants {
                     "ai_response"
             );
 
+    public static final Identifier NEED_VISION =
+            new Identifier(
+                    "minecraftai",
+                    "need_vision"
+            );
+
     private NetworkConstants() {
     }
 }

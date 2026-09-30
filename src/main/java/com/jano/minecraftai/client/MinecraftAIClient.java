@@ -1,5 +1,6 @@
 package com.jano.minecraftai.client;
 
+import com.jano.minecraftai.ai.QuestionRoute;
 import com.jano.minecraftai.ai.ToolFastPathRouter;
 import com.jano.minecraftai.network.NetworkConstants;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -360,6 +361,41 @@ public class MinecraftAIClient
         );
 
         ClientPlayNetworking.registerGlobalReceiver(
+                NetworkConstants.NEED_VISION,
+                (
+                        client,
+                        handler,
+                        buffer,
+                        responseSender
+                ) -> {
+
+                    String question =
+                            buffer.readString(
+                                    2048
+                            );
+
+                    client.execute(
+                            () -> {
+
+                                System.out.println(
+                                        "[MinecraftAI][Route] NEED_VISION recibido"
+                                );
+
+                                AIOverlayState.setStatus(
+                                        "Observando..."
+                                );
+
+                                capturarYEnviarVision(
+                                        client,
+                                        question
+                                );
+                            }
+                    );
+                }
+        );
+
+
+        ClientPlayNetworking.registerGlobalReceiver(
                 NetworkConstants.AI_RESPONSE,
                 (
                         client,
@@ -554,35 +590,24 @@ public class MinecraftAIClient
                 true
         );
 
-        String fastTool =
-                ToolFastPathRouter.resolve(
-                        question
-                );
-
-        if (
-                fastTool != null
-        ) {
-
-            AIOverlayState.setStatus(
-                    "Consultando..."
-            );
-
-            System.out.println(
-                    "[MinecraftAI] Cliente FAST PATH -> "
-                            + fastTool
-                            + " | sin screenshot"
-            );
-
-            enviarPreguntaSinImagen(
-                    question
-            );
-
-            return;
-        }
-
         AIOverlayState.setStatus(
-                "Observando..."
+                "Pensando..."
         );
+
+        System.out.println(
+                "[MinecraftAI] Preflight sin screenshot: "
+                        + question
+        );
+
+        enviarPreguntaSinImagen(
+                question
+        );
+    }
+
+    private static void capturarYEnviarVision(
+            MinecraftClient client,
+            String question
+    ) {
 
         NativeImage screenshot =
                 null;
@@ -593,10 +618,9 @@ public class MinecraftAIClient
         try {
 
             screenshot =
-                    ScreenshotRecorder
-                            .takeScreenshot(
-                                    client.getFramebuffer()
-                            );
+                    ScreenshotRecorder.takeScreenshot(
+                            client.getFramebuffer()
+                    );
 
             int originalWidth =
                     screenshot.getWidth();
@@ -639,7 +663,7 @@ public class MinecraftAIClient
 
             if (
                     pngBytes.length
-                    > MAX_IMAGE_SIZE
+                            > MAX_IMAGE_SIZE
             ) {
 
                 AIOverlayState.setThinking(
@@ -659,6 +683,12 @@ public class MinecraftAIClient
 
             AIOverlayState.setStatus(
                     "Enviando..."
+            );
+
+            System.out.println(
+                    "[MinecraftAI][Route] screenshot enviado | "
+                            + pngBytes.length
+                            + " bytes"
             );
 
             enviarPreguntaEnChunks(

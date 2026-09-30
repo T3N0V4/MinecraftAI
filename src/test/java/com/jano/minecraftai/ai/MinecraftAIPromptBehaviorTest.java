@@ -95,26 +95,38 @@ public class MinecraftAIPromptBehaviorTest {
     }
 
     @Test
-    void definesFriendlyWisePersonality() {
+    void definesAriscaLazyPersonality() {
 
         String prompt =
                 buildPrompt();
 
         assertTrue(
                 prompt.contains(
-                        "amigable, curioso, inocente y sabio"
+                        "algo arisca y bastante vaga"
                 )
         );
 
         assertTrue(
                 prompt.contains(
-                        "humor agresivo"
+                        "Tu humor es seco."
                 )
         );
 
         assertTrue(
                 prompt.contains(
-                        "roleplay exagerado"
+                        "No uses sarcasmo en todas las respuestas."
+                )
+        );
+
+        assertTrue(
+                prompt.contains(
+                        "primero respondé correctamente"
+                )
+        );
+
+        assertTrue(
+                prompt.contains(
+                        "No hagas roleplay constante."
                 )
         );
     }

@@ -29,8 +29,6 @@ public final class ToolFastPathRouter {
                 q.contains("en que estructura estoy")
                 || q.contains("que estructura es esta")
                 || q.contains("que estructura estoy")
-                || q.contains("donde estoy")
-                || q.contains("en donde estoy")
         ) {
             return "get_current_structure";
         }

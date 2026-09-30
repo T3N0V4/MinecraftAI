@@ -16,8 +16,7 @@ public class ToolFastPathRouterTest {
                 )
         );
 
-        assertEquals(
-                "get_current_structure",
+        assertNull(
                 ToolFastPathRouter.resolve(
                         "donde estoy"
                 )

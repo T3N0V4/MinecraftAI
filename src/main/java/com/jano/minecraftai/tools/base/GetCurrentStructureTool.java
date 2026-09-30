@@ -1,5 +1,12 @@
 package com.jano.minecraftai.tools.base;
 
+import com.jano.minecraftai.tools.MinecraftAITool;
+import com.jano.minecraftai.tools.ToolCachePolicy;
+import com.jano.minecraftai.tools.ToolCacheScope;
+import com.jano.minecraftai.tools.ToolContext;
+import com.jano.minecraftai.tools.ToolResult;
+import com.jano.minecraftai.tools.ToolTier;
+
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKeys;
 
@@ -10,22 +17,23 @@ import net.minecraft.structure.StructureStart;
 
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockBox;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 
 import net.minecraft.world.gen.StructureAccessor;
 import net.minecraft.world.gen.structure.Structure;
 
-import com.jano.minecraftai.tools.MinecraftAITool;
-import com.jano.minecraftai.tools.ToolContext;
-import com.jano.minecraftai.tools.ToolResult;
-import com.jano.minecraftai.tools.ToolTier;
+import java.util.List;
 
 public class GetCurrentStructureTool
         implements MinecraftAITool {
 
     @Override
     public String getName() {
+
         return "get_current_structure";
     }
+
 
     @Override
     public String getDescription() {
@@ -33,12 +41,13 @@ public class GetCurrentStructureTool
         return "Detecta si el jugador se encuentra dentro de una estructura generada.";
     }
 
-    @Override
-    public ToolTier getTier() {
-        return ToolTier.BASE;
-    }
 
     @Override
+    public ToolTier getTier() {
+
+        return ToolTier.BASE;
+    }
+@Override
     public ToolResult execute(
             ToolContext context
     ) {
@@ -52,22 +61,50 @@ public class GetCurrentStructureTool
         StructureAccessor accessor =
                 world.getStructureAccessor();
 
+        BlockPos playerPos =
+                player.getBlockPos();
+
+        ChunkPos chunkPos =
+                new ChunkPos(
+                        playerPos
+                );
+
+        /*
+         * IMPORTANTE:
+         *
+         * Antes recorríamos TODAS las estructuras
+         * registradas en el modpack y preguntábamos
+         * una por una si contenían al jugador.
+         *
+         * Ahora pedimos solamente los StructureStart
+         * relacionados con el chunk actual.
+         */
+        List<StructureStart> starts =
+                accessor.getStructureStarts(
+                        chunkPos,
+                        structure -> true
+                );
+
+        if (
+                starts == null
+                || starts.isEmpty()
+        ) {
+
+            return notInsideStructure();
+        }
+
+
         Registry<Structure> registry =
                 world.getRegistryManager()
                         .get(
                                 RegistryKeys.STRUCTURE
                         );
 
-        for (
-                Structure structure :
-                registry
-        ) {
 
-            StructureStart start =
-                    accessor.getStructureContaining(
-                            player.getBlockPos(),
-                            structure
-                    );
+        for (
+                StructureStart start :
+                starts
+        ) {
 
             if (
                     start == null
@@ -76,17 +113,39 @@ public class GetCurrentStructureTool
                 continue;
             }
 
+            /*
+             * structureContains usa la información
+             * real de la estructura para comprobar
+             * si esta posición pertenece a ella.
+             */
+            if (
+                    !accessor.structureContains(
+                            playerPos,
+                            start
+                    )
+            ) {
+                continue;
+            }
+
+
+            Structure structure =
+                    start.getStructure();
+
             Identifier id =
                     registry.getId(
                             structure
                     );
 
-            if (id == null) {
+            if (
+                    id == null
+            ) {
                 continue;
             }
 
+
             BlockBox box =
                     start.getBoundingBox();
+
 
             return ToolResult.success(
                     """
@@ -104,17 +163,27 @@ public class GetCurrentStructureTool
                     .formatted(
                             id,
                             id.getNamespace(),
+
                             start.getPos().x,
                             start.getPos().z,
+
                             box.getMinX(),
                             box.getMinY(),
                             box.getMinZ(),
+
                             box.getMaxX(),
                             box.getMaxY(),
                             box.getMaxZ()
                     )
             );
         }
+
+
+        return notInsideStructure();
+    }
+
+
+    private ToolResult notInsideStructure() {
 
         return ToolResult.success(
                 """

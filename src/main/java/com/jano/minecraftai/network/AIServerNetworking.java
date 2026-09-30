@@ -303,6 +303,29 @@ public class AIServerNetworking {
                             if (
                                     response != null
                                     && response.success
+                                    && "vision".equalsIgnoreCase(
+                                            response.provider
+                                    )
+                                    && "NEED_VISION".equalsIgnoreCase(
+                                            response.content
+                                    )
+                            ) {
+
+                                System.out.println(
+                                        "[MinecraftAI][Route] solicitando screenshot al cliente"
+                                );
+
+                                sendNeedVision(
+                                        player,
+                                        pregunta
+                                );
+
+                                return;
+                            }
+
+                            if (
+                                    response != null
+                                    && response.success
                                     && response.content != null
                                     && !response.content.isBlank()
                                     && "gemini".equalsIgnoreCase(
@@ -327,6 +350,27 @@ public class AIServerNetworking {
                     "MinecraftAI-Request"
             ).start();
         });
+    }
+
+
+    private static void sendNeedVision(
+            ServerPlayerEntity player,
+            String pregunta
+    ) {
+
+        PacketByteBuf buffer =
+                PacketByteBufs.create();
+
+        buffer.writeString(
+                pregunta,
+                2048
+        );
+
+        ServerPlayNetworking.send(
+                player,
+                NetworkConstants.NEED_VISION,
+                buffer
+        );
     }
 
 
