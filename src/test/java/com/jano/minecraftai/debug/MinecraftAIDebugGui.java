@@ -1,5 +1,7 @@
 package com.jano.minecraftai.debug;
 
+import com.jano.minecraftai.debug.ui.DebugHeaderPanel;
+import com.jano.minecraftai.debug.ui.DebugTheme;
 import com.jano.minecraftai.ai.AIRequest;
 import com.jano.minecraftai.ai.AIResponse;
 import com.jano.minecraftai.ai.ConversationMemory;
@@ -80,6 +82,8 @@ private final List<String> inputHistory =
     private JTextField inputField;
 
     private JLabel statusLabel;
+
+    private DebugHeaderPanel debugHeader;
 
     private JTextField playerField;
     private JComboBox<String> biomeBox;
@@ -235,12 +239,38 @@ private final List<String> inputHistory =
                     SUCCESS
             );
 
+            if (
+                    debugHeader != null
+            ) {
+
+                debugHeader.setGeminiOnline(
+                        true
+                );
+
+                debugHeader.setMainStatus(
+                        "SYSTEM READY"
+                );
+            }
+
         } else {
 
             setStatus(
                     "GEMINI_API_KEY no disponible",
                     ERROR
             );
+
+            if (
+                    debugHeader != null
+            ) {
+
+                debugHeader.setGeminiOnline(
+                        false
+                );
+
+                debugHeader.setMainStatus(
+                        "GEMINI OFFLINE"
+                );
+            }
         }
 
         frame.addWindowListener(
@@ -387,87 +417,10 @@ private final List<String> inputHistory =
 
     private JPanel createHeader() {
 
-        JPanel panel =
-                new JPanel(
-                        new BorderLayout()
-                );
+        debugHeader =
+                new DebugHeaderPanel();
 
-        panel.setBackground(
-                BG
-        );
-
-        JLabel title =
-                new JLabel(
-                        "MinecraftAI Debug"
-                );
-
-        title.setForeground(
-                TEXT
-        );
-
-        title.setFont(
-                new Font(
-                        Font.SANS_SERIF,
-                        Font.BOLD,
-                        22
-                )
-        );
-
-        JLabel subtitle =
-                new JLabel(
-                        "Playground de contexto, memoria, tools y prompt"
-                );
-
-        subtitle.setForeground(
-                MUTED
-        );
-
-        JPanel titles =
-                new JPanel();
-
-        titles.setLayout(
-                new BoxLayout(
-                        titles,
-                        BoxLayout.Y_AXIS
-                )
-        );
-
-        titles.setBackground(
-                BG
-        );
-
-        titles.add(
-                title
-        );
-
-        titles.add(
-                subtitle
-        );
-
-        statusLabel =
-                new JLabel(
-                        "Inicializando..."
-                );
-
-        statusLabel.setFont(
-                new Font(
-                        Font.SANS_SERIF,
-                        Font.BOLD,
-                        13
-                )
-        );
-
-        panel.add(
-                titles,
-                BorderLayout.WEST
-        );
-
-        panel.add(
-                statusLabel,
-                BorderLayout.EAST
-        );
-
-        return panel;
+        return debugHeader;
     }
 
     private JScrollPane createContextScrollPane() {
@@ -2114,6 +2067,19 @@ private final List<String> inputHistory =
                                             ERROR
                                     );
 
+                                    if (
+                                            debugHeader != null
+                                    ) {
+
+                                        debugHeader.setSttOnline(
+                                                false
+                                        );
+
+                                        debugHeader.setMainStatus(
+                                                "STT OFFLINE"
+                                        );
+                                    }
+
                                     appendError(
                                             "No se pudo iniciar el servicio STT."
                                     );
@@ -2140,6 +2106,19 @@ private final List<String> inputHistory =
                                             "Escuchando...",
                                             ACCENT
                                     );
+
+                                    if (
+                                            debugHeader != null
+                                    ) {
+
+                                        debugHeader.setSttOnline(
+                                                true
+                                        );
+
+                                        debugHeader.setMainStatus(
+                                                "LISTENING"
+                                        );
+                                    }
 
                                 } catch (
                                         Exception ex
@@ -2174,6 +2153,15 @@ private final List<String> inputHistory =
                 "Transcribiendo...",
                 ACCENT
         );
+
+        if (
+                debugHeader != null
+        ) {
+
+            debugHeader.setMainStatus(
+                    "TRANSCRIBING"
+            );
+        }
 
         CompletableFuture
                 .supplyAsync(
@@ -2355,6 +2343,15 @@ private final List<String> inputHistory =
                 "Pensando...",
                 ACCENT
         );
+
+        if (
+                debugHeader != null
+        ) {
+
+            debugHeader.setMainStatus(
+                    "THINKING"
+            );
+        }
 
         CompletableFuture
                 .supplyAsync(
@@ -2625,6 +2622,17 @@ private final List<String> inputHistory =
                         + " ms",
                 SUCCESS
         );
+
+        if (
+                debugHeader != null
+        ) {
+
+            debugHeader.setMainStatus(
+                    "READY · "
+                            + response.durationMs
+                            + " ms"
+            );
+        }
     }
 
     private PlayerContext buildContext() {
@@ -4161,13 +4169,32 @@ private final List<String> inputHistory =
             Color color
     ) {
 
-        statusLabel.setText(
-                text
-        );
+        /*
+         * Compatibilidad con el header viejo.
+         * Actualmente statusLabel ya no se crea,
+         * porque DebugHeaderPanel muestra el estado.
+         */
+        if (
+                statusLabel != null
+        ) {
 
-        statusLabel.setForeground(
-                color
-        );
+            statusLabel.setText(
+                    text
+            );
+
+            statusLabel.setForeground(
+                    color
+            );
+        }
+
+        if (
+                debugHeader != null
+        ) {
+
+            debugHeader.setMainStatus(
+                    text
+            );
+        }
     }
 
     private JPanel section(
