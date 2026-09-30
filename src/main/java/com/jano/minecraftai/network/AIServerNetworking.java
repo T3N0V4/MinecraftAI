@@ -450,8 +450,8 @@ public class AIServerNetworking {
 
         private final byte[][] chunks;
 
-        private final AtomicInteger received =
-                new AtomicInteger(0);
+        private int received =
+                0;
 
         private PendingRequest(
                 UUID playerId,
@@ -492,7 +492,9 @@ public class AIServerNetworking {
             chunks[index] =
                     data;
 
-            return received.incrementAndGet()
+            received++;
+
+            return received
                     == totalChunks;
         }
 
