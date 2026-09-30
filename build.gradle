@@ -75,3 +75,9 @@ tasks.register("aiDebugGui", JavaExec) {
 
     mainClass = "com.jano.minecraftai.debug.MinecraftAIDebugGui"
 }
+tasks.register("presentationDebug", JavaExec) {
+    group = "minecraftai"
+    description = "Abre el preview visual de ResponsePresentation."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = "com.jano.minecraftai.debug.presentation.PresentationDebugPreview"
+}

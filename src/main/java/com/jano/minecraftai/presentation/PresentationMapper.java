@@ -37,7 +37,6 @@ public final class PresentationMapper {
         );
     }
 
-
     private static String buildDisplayText(
             PresentationInput input,
             PresentationType type
@@ -46,16 +45,10 @@ public final class PresentationMapper {
             return input.getAiText();
         }
 
-        if (!input.hasToolResult()) {
-            return input.getAiText();
-        }
-
-        if (input.getAiText().isBlank()) {
+        if (input.hasToolResult()) {
             return input.getToolResult();
         }
 
-        return input.getAiText()
-                + "\n\n"
-                + input.getToolResult();
+        return input.getAiText();
     }
 }
